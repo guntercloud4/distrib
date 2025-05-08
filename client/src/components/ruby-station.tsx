@@ -28,6 +28,7 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
   const [freeBookStudentId, setFreeBookStudentId] = useState("");
   const [showSystemLogs, setShowSystemLogs] = useState(false);
   const [showAddStudentDialog, setShowAddStudentDialog] = useState(false);
+  const [logsFilter, setLogsFilter] = useState<string>("all");
   const [newStudent, setNewStudent] = useState({
     studentId: "",
     lastName: "",
@@ -798,14 +799,109 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
                   <span className="text-sm font-medium text-neutral-800">Active</span>
                 </div>
                 <div className="pt-4 border-t border-neutral-200">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="inline-flex items-center text-destructive border-destructive/50 hover:bg-destructive/10"
-                  >
-                    <span className="material-icons text-xs mr-1">history</span>
-                    View System Logs
-                  </Button>
+                  <Dialog open={showSystemLogs} onOpenChange={setShowSystemLogs}>
+                    <DialogTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="inline-flex items-center text-destructive border-destructive/50 hover:bg-destructive/10"
+                      >
+                        <FontAwesomeIcon icon="history" className="mr-2" />
+                        View System Logs
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
+                      <DialogHeader>
+                        <DialogTitle>System Logs</DialogTitle>
+                      </DialogHeader>
+                      <div className="py-4 overflow-y-auto" style={{ maxHeight: "calc(80vh - 120px)" }}>
+                        <div className="space-y-6">
+                          <div className="flex justify-between items-center">
+                            <h4 className="text-sm font-medium text-neutral-700">Activity Timeline</h4>
+                            <div className="flex space-x-2">
+                              <Button 
+                                size="sm" 
+                                variant="outline" 
+                                className={`text-xs px-2 py-1 h-7 ${logsFilter === 'all' ? 'bg-neutral-100' : ''}`}
+                                onClick={() => setLogsFilter('all')}
+                              >
+                                All
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="outline" 
+                                className={`text-xs px-2 py-1 h-7 ${logsFilter === 'distribution' ? 'bg-neutral-100' : ''}`}
+                                onClick={() => setLogsFilter('distribution')}
+                              >
+                                Distribution
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                className={`text-xs px-2 py-1 h-7 ${logsFilter === 'checker' ? 'bg-neutral-100' : ''}`}
+                                onClick={() => setLogsFilter('checker')}
+                              >
+                                Verification
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                className={`text-xs px-2 py-1 h-7 ${logsFilter === 'cash' ? 'bg-neutral-100' : ''}`}
+                                onClick={() => setLogsFilter('cash')}
+                              >
+                                Payment
+                              </Button>
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-4 max-h-[calc(80vh-180px)] overflow-y-auto pr-2">
+                            {formattedLogs
+                              .filter(log => {
+                                if (logsFilter === 'all') return true;
+                                if (logsFilter === 'distribution') return log.data.action === 'DISTRIBUTE' || log.data.action === 'VERIFY_DISTRIBUTION';
+                                if (logsFilter === 'checker') return log.data.action === 'VERIFY_DISTRIBUTION';
+                                if (logsFilter === 'cash') return log.data.action === 'PAYMENT';
+                                return true;
+                              })
+                              .map((log, index) => (
+                                <div key={index} className="flex items-start space-x-3 p-3 border border-neutral-200 rounded-md">
+                                  <div className={`flex-shrink-0 h-8 w-8 rounded-full ${log.color} flex items-center justify-center`}>
+                                    <span className="material-icons text-sm">{log.icon}</span>
+                                  </div>
+                                  <div className="flex-1">
+                                    <div className="flex justify-between">
+                                      <p className="text-sm font-medium text-neutral-800">{log.title}</p>
+                                      <p className="text-xs text-neutral-500">{new Date(log.timestamp).toLocaleString()}</p>
+                                    </div>
+                                    <p className="text-sm text-neutral-600 mt-1">{log.details}</p>
+                                    <div className="flex justify-between mt-1">
+                                      <p className="text-xs text-neutral-500">
+                                        Student ID: {log.data.studentId || 'N/A'}
+                                      </p>
+                                      <p className="text-xs text-neutral-500">
+                                        Operator: {log.data.operatorName || 'System'}
+                                      </p>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            
+                            {formattedLogs.filter(log => {
+                              if (logsFilter === 'all') return true;
+                              if (logsFilter === 'distribution') return log.data.action === 'DISTRIBUTE' || log.data.action === 'VERIFY_DISTRIBUTION';
+                              if (logsFilter === 'checker') return log.data.action === 'VERIFY_DISTRIBUTION';
+                              if (logsFilter === 'cash') return log.data.action === 'PAYMENT';
+                              return true;
+                            }).length === 0 && (
+                              <div className="text-center text-sm text-neutral-500 py-10">
+                                No system logs found for the selected filter
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
                 </div>
               </div>
             </CardContent>
