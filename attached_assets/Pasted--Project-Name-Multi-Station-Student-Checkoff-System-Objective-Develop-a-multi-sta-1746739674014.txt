@@ -1,0 +1,61 @@
+### **Project Name:** Multi-Station Student Checkoff System  
+**Objective:**  
+Develop a multi-station, real-time checkoff system to efficiently manage the distribution of items to over 3,000 students, ensuring detailed logging, traceability, and high-performance updates.
+
+**System Components:**  
+1. **Distribution Station**  
+   - Operators log in by entering their name.  
+   - Student IDs are scanned, triggering an instant display of student details, including their school photo and item purchases (columns 8-12).  
+   - Delivery confirmation is logged with timestamps and operator names.  
+
+2. **Checkers Station**  
+   - Paper-based verification followed by system checkoff.  
+   - Staff logs their name and timestamp.  
+   - Student details and school photo are displayed during the checkoff process.  
+
+3. **Cash Station**  
+   - **Payment Processing Logic:**  
+     1. Operator enters the student ID and presses Enter to proceed.  
+     2. Operator manually enters the student’s name.  
+     3. Operator records cash amounts for each bill denomination: **1, 5, 10, 20, 50, 100**.  
+     4. Clicking "Process Payment" calculates the total amount received and displays:  
+        - **Change due**  
+        - **Exact bills needed for change distribution**  
+     5. Logs payment details, timestamp, and operator name for traceability.  
+
+4. **Ruby Station (Admin Hub)**  
+   - **Superuser functionality** with full access to Distribution, Checkers, and Cash tasks.  
+   - **Real-time, live-updating logs** for **all actions**, including:  
+     - Logins, scans, failed scans, checkoffs, payments, and admin updates.  
+   - **Master database viewer**  
+     - Instantly browse, search, and edit CSV records in a **table format**.  
+     - Auto-save changes directly to the database for real-time updates.  
+   - **CSV Upload & Processing**  
+     - Ruby can upload CSV files for batch student imports.  
+     - System prompts for **field matching** and **validation** before importing to maintain data integrity.  
+   - **Student Database Management**  
+     - Ruby can **add and remove students** via the database editor, ensuring proper logging and record tracking.  
+   - **Ability to issue free books**  
+     - Ruby can record free book distribution while ensuring the transaction is logged correctly.
+
+**Database Structure (Based on CSV Format):**  
+- **Student Details:** Last Name, First Name, Order Entered Date, Order Type, Order Number, Balance Due, Payment Status.  
+- **Item Details (Displayed upon scanning):**  
+  - **Yearbook (YRBK)**  
+  - **Personalization**  
+  - **Signature Package**  
+  - **Clear Cover**  
+  - **Photo Pockets**  
+
+**Scanner Functionality:**  
+- **Upon scanning a student ID, instantly display:**  
+  - **All stored student data** (name, payment status, balance due, purchase details).  
+  - **Student’s school photo for quick identification.**  
+  - **Live record of actions logged across all stations.**  
+
+**Security & Performance Requirements:**  
+- **Tamper-Proof Audit Log** ensures all modifications are recorded and prevents unauthorized data alterations.  
+- **Restricted login access to Ruby Station:**  
+  - Only `"Ruby"`, `"Joshua Gunter"`, `"Eitan Rubinstein"`, and `"Cole Broumas"` can log in.  
+- **Real-time synchronization** across stations.  
+- **Efficient CSV imports** ensuring field validation.  
