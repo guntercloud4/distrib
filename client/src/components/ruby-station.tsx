@@ -26,6 +26,17 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
   const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
   const [showFreeBookDialog, setShowFreeBookDialog] = useState(false);
   const [freeBookStudentId, setFreeBookStudentId] = useState("");
+  const [showSystemLogs, setShowSystemLogs] = useState(false);
+  const [showAddStudentDialog, setShowAddStudentDialog] = useState(false);
+  const [newStudent, setNewStudent] = useState({
+    studentId: "",
+    lastName: "",
+    firstName: "",
+    orderType: "",
+    orderNumber: "",
+    balanceDue: "0",
+    paymentStatus: "Unpaid"
+  });
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -92,6 +103,42 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
     onError: (error: Error) => {
       toast({
         title: "CSV Import Failed",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Add student mutation
+  const addStudentMutation = useMutation({
+    mutationFn: async (studentData: typeof newStudent) => {
+      const res = await apiRequest('POST', '/api/students', studentData);
+      return await res.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Student Added",
+        description: `Successfully added ${data.firstName} ${data.lastName} to the database.`,
+      });
+      
+      // Close dialog and reset form
+      setShowAddStudentDialog(false);
+      setNewStudent({
+        studentId: "",
+        lastName: "",
+        firstName: "",
+        orderType: "",
+        orderNumber: "",
+        balanceDue: "0",
+        paymentStatus: "Unpaid"
+      });
+      
+      // Refetch students to update the table
+      refetchStudents();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to Add Student",
         description: error.message,
         variant: "destructive"
       });
@@ -172,19 +219,102 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
     });
   };
 
+  // Handle new student form changes
+  const handleNewStudentChange = (field: string, value: string) => {
+    setNewStudent(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  // Add a new student
+  const addStudent = () => {
+    if (!newStudent.studentId || !newStudent.firstName || !newStudent.lastName) {
+      toast({
+        title: "Missing Information",
+        description: "Please provide Student ID, First Name, and Last Name at minimum.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    addStudentMutation.mutate(newStudent);
+  };
+
+  // Handle database backup
+  const handleDatabaseBackup = () => {
+    toast({
+      title: "Database Backup",
+      description: "Database backup initiated. A file will download shortly.",
+    });
+    
+    // Create a CSV or JSON of all students
+    if (students && students.length > 0) {
+      // Format the data
+      const headers = Object.keys(students[0]).join(',');
+      const rows = students.map(student => {
+        return Object.values(student).map(value => {
+          // Handle strings with commas by wrapping in quotes
+          if (typeof value === 'string' && value.includes(',')) {
+            return `"${value}"`;
+          }
+          return value;
+        }).join(',');
+      });
+      
+      const csv = [headers, ...rows].join('\n');
+      
+      // Create a download link
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `yearbook_students_${new Date().toISOString().slice(0,10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      
+      // Clean up
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 100);
+    } else {
+      toast({
+        title: "No Data",
+        description: "There are no students to backup.",
+        variant: "destructive"
+      });
+    }
+  };
+
   // Issue free book
   const issueFreeBook = () => {
     if (!freeBookStudentId) {
       toast({
-        title: "Student ID Required",
-        description: "Please enter a student ID to issue a free book.",
+        title: "Student Name Required",
+        description: "Please enter a student name to issue a free book.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Find student by name
+    const student = students?.find(s => 
+      `${s.firstName} ${s.lastName}`.toLowerCase().includes(freeBookStudentId.toLowerCase()) ||
+      `${s.lastName} ${s.firstName}`.toLowerCase().includes(freeBookStudentId.toLowerCase())
+    );
+    
+    if (!student) {
+      toast({
+        title: "Student Not Found",
+        description: `No student found with name: ${freeBookStudentId}`,
         variant: "destructive"
       });
       return;
     }
     
     freeBookMutation.mutate({
-      studentId: freeBookStudentId,
+      studentId: student.studentId,
       operatorName
     });
   };
@@ -405,13 +535,137 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
                 <div className="bg-neutral-50 p-4 rounded-lg">
                   <h4 className="text-sm font-medium text-neutral-800 mb-2">Add Student</h4>
                   <p className="text-xs text-neutral-600 mb-3">Manually add a new student to the database</p>
-                  <Button
-                    size="sm"
-                    className="inline-flex items-center bg-primary hover:bg-primary-dark"
-                  >
-                    <span className="material-icons text-xs mr-1">person_add</span>
-                    Add Student
-                  </Button>
+                  <Dialog open={showAddStudentDialog} onOpenChange={setShowAddStudentDialog}>
+                    <DialogTrigger asChild>
+                      <Button
+                        size="sm"
+                        className="inline-flex items-center bg-primary hover:bg-primary-dark"
+                      >
+                        <FontAwesomeIcon icon="user-plus" className="mr-2" />
+                        Add Student
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-md">
+                      <DialogHeader>
+                        <DialogTitle>Add New Student</DialogTitle>
+                      </DialogHeader>
+                      <div className="py-4">
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-sm font-medium text-neutral-700 mb-1">
+                              Student ID <span className="text-red-500">*</span>
+                            </label>
+                            <Input
+                              value={newStudent.studentId}
+                              onChange={(e) => handleNewStudentChange('studentId', e.target.value)}
+                              placeholder="Enter student ID"
+                              className="w-full"
+                            />
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-sm font-medium text-neutral-700 mb-1">
+                                First Name <span className="text-red-500">*</span>
+                              </label>
+                              <Input
+                                value={newStudent.firstName}
+                                onChange={(e) => handleNewStudentChange('firstName', e.target.value)}
+                                placeholder="First name"
+                                className="w-full"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-neutral-700 mb-1">
+                                Last Name <span className="text-red-500">*</span>
+                              </label>
+                              <Input
+                                value={newStudent.lastName}
+                                onChange={(e) => handleNewStudentChange('lastName', e.target.value)}
+                                placeholder="Last name"
+                                className="w-full"
+                              />
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-sm font-medium text-neutral-700 mb-1">
+                                Order Type
+                              </label>
+                              <Input
+                                value={newStudent.orderType}
+                                onChange={(e) => handleNewStudentChange('orderType', e.target.value)}
+                                placeholder="Order type"
+                                className="w-full"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-neutral-700 mb-1">
+                                Order Number
+                              </label>
+                              <Input
+                                value={newStudent.orderNumber}
+                                onChange={(e) => handleNewStudentChange('orderNumber', e.target.value)}
+                                placeholder="Order number"
+                                className="w-full"
+                              />
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-sm font-medium text-neutral-700 mb-1">
+                                Balance Due ($)
+                              </label>
+                              <Input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={newStudent.balanceDue}
+                                onChange={(e) => handleNewStudentChange('balanceDue', e.target.value)}
+                                placeholder="0.00"
+                                className="w-full"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-neutral-700 mb-1">
+                                Payment Status
+                              </label>
+                              <select
+                                value={newStudent.paymentStatus}
+                                onChange={(e) => handleNewStudentChange('paymentStatus', e.target.value)}
+                                className="w-full rounded-md border border-neutral-300 p-2 text-sm"
+                              >
+                                <option value="Unpaid">Unpaid</option>
+                                <option value="Paid">Paid</option>
+                                <option value="Free">Free</option>
+                              </select>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="flex justify-end space-x-2 mt-6">
+                          <Button
+                            variant="outline"
+                            onClick={() => setShowAddStudentDialog(false)}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            onClick={addStudent}
+                            disabled={addStudentMutation.isPending}
+                          >
+                            {addStudentMutation.isPending ? (
+                              <>
+                                <FontAwesomeIcon icon="sync" className="mr-2 animate-spin" />
+                                Adding...
+                              </>
+                            ) : (
+                              "Add Student"
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
                 </div>
                 
                 <div className="bg-neutral-50 p-4 rounded-lg">
@@ -434,12 +688,12 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
                       <div className="py-4">
                         <div className="mb-4">
                           <label className="block text-sm font-medium text-neutral-700 mb-1">
-                            Student ID
+                            Student Name
                           </label>
                           <Input
                             value={freeBookStudentId}
                             onChange={(e) => setFreeBookStudentId(e.target.value)}
-                            placeholder="Enter student ID"
+                            placeholder="Enter student name"
                             className="w-full"
                           />
                         </div>
@@ -476,8 +730,9 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
                     size="sm"
                     variant="secondary"
                     className="inline-flex items-center bg-neutral-700 hover:bg-neutral-800 text-white"
+                    onClick={handleDatabaseBackup}
                   >
-                    <span className="material-icons text-xs mr-1">cloud_download</span>
+                    <FontAwesomeIcon icon="download" className="mr-2" />
                     Backup Now
                   </Button>
                 </div>
