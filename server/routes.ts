@@ -1,0 +1,403 @@
+import type { Express, Request, Response } from "express";
+import { createServer, type Server } from "http";
+import { storage } from "./storage";
+import { setupWebSocketServer } from "./ws";
+import { z } from "zod";
+import { 
+  insertStudentSchema, 
+  insertActionLogSchema, 
+  insertDistributionSchema, 
+  insertPaymentSchema, 
+  paymentProcessSchema,
+  csvMappingSchema
+} from "@shared/schema";
+
+export async function registerRoutes(app: Express): Promise<Server> {
+  // Create HTTP server
+  const httpServer = createServer(app);
+  
+  // Setup WebSocket server
+  setupWebSocketServer(httpServer);
+
+  // Get all students
+  app.get("/api/students", async (req: Request, res: Response) => {
+    try {
+      const students = await storage.getStudents();
+      res.json(students);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch students" });
+    }
+  });
+
+  // Get student by ID
+  app.get("/api/students/:studentId", async (req: Request, res: Response) => {
+    try {
+      const { studentId } = req.params;
+      const student = await storage.getStudentByStudentId(studentId);
+      
+      if (!student) {
+        return res.status(404).json({ error: "Student not found" });
+      }
+      
+      res.json(student);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch student" });
+    }
+  });
+
+  // Create a new student
+  app.post("/api/students", async (req: Request, res: Response) => {
+    try {
+      const studentData = insertStudentSchema.parse(req.body);
+      const student = await storage.createStudent(studentData);
+      
+      // Log the action
+      await storage.createLog({
+        studentId: student.studentId,
+        action: "CREATE_STUDENT",
+        details: { student },
+        stationName: "Ruby Station",
+        operatorName: req.body.operatorName,
+      });
+      
+      res.status(201).json(student);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid student data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create student" });
+    }
+  });
+
+  // Update a student
+  app.put("/api/students/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const existingStudent = await storage.getStudentById(id);
+      
+      if (!existingStudent) {
+        return res.status(404).json({ error: "Student not found" });
+      }
+      
+      const studentData = insertStudentSchema.partial().parse(req.body);
+      const student = await storage.updateStudent(id, studentData);
+      
+      // Log the action
+      await storage.createLog({
+        studentId: existingStudent.studentId,
+        action: "UPDATE_STUDENT",
+        details: { student },
+        stationName: "Ruby Station",
+        operatorName: req.body.operatorName,
+      });
+      
+      res.json(student);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid student data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to update student" });
+    }
+  });
+
+  // Delete a student
+  app.delete("/api/students/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const student = await storage.getStudentById(id);
+      
+      if (!student) {
+        return res.status(404).json({ error: "Student not found" });
+      }
+      
+      await storage.deleteStudent(id);
+      
+      // Log the action
+      await storage.createLog({
+        studentId: student.studentId,
+        action: "DELETE_STUDENT",
+        details: { student },
+        stationName: "Ruby Station",
+        operatorName: req.body.operatorName,
+      });
+      
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete student" });
+    }
+  });
+
+  // Get logs
+  app.get("/api/logs", async (req: Request, res: Response) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
+      const logs = await storage.getLogs(limit);
+      res.json(logs);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch logs" });
+    }
+  });
+  
+  // Get logs by student ID
+  app.get("/api/logs/student/:studentId", async (req: Request, res: Response) => {
+    try {
+      const { studentId } = req.params;
+      const logs = await storage.getLogsByStudentId(studentId);
+      res.json(logs);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch logs" });
+    }
+  });
+
+  // Create a log
+  app.post("/api/logs", async (req: Request, res: Response) => {
+    try {
+      const logData = insertActionLogSchema.parse(req.body);
+      const log = await storage.createLog(logData);
+      res.status(201).json(log);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid log data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create log" });
+    }
+  });
+
+  // Get distributions
+  app.get("/api/distributions", async (req: Request, res: Response) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
+      const distributions = await storage.getDistributions(limit);
+      res.json(distributions);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch distributions" });
+    }
+  });
+
+  // Get distributions by student ID
+  app.get("/api/distributions/student/:studentId", async (req: Request, res: Response) => {
+    try {
+      const { studentId } = req.params;
+      const distributions = await storage.getDistributionsByStudentId(studentId);
+      res.json(distributions);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch distributions" });
+    }
+  });
+
+  // Create a distribution
+  app.post("/api/distributions", async (req: Request, res: Response) => {
+    try {
+      const distributionData = insertDistributionSchema.parse(req.body);
+      
+      // Check if student exists
+      const student = await storage.getStudentByStudentId(distributionData.studentId);
+      if (!student) {
+        return res.status(404).json({ error: "Student not found" });
+      }
+      
+      const distribution = await storage.createDistribution(distributionData);
+      
+      // Log the action
+      await storage.createLog({
+        studentId: distribution.studentId,
+        action: "DISTRIBUTE_YEARBOOK",
+        details: { distribution },
+        stationName: "Distribution Station",
+        operatorName: distribution.operatorName,
+      });
+      
+      res.status(201).json(distribution);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid distribution data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create distribution" });
+    }
+  });
+
+  // Verify a distribution
+  app.put("/api/distributions/:id/verify", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { verifiedBy } = req.body;
+      
+      if (!verifiedBy) {
+        return res.status(400).json({ error: "Verified by is required" });
+      }
+      
+      const distribution = await storage.verifyDistribution(id, verifiedBy);
+      
+      if (!distribution) {
+        return res.status(404).json({ error: "Distribution not found" });
+      }
+      
+      // Log the action
+      await storage.createLog({
+        studentId: distribution.studentId,
+        action: "VERIFY_DISTRIBUTION",
+        details: { distribution },
+        stationName: "Checkers Station",
+        operatorName: verifiedBy,
+      });
+      
+      res.json(distribution);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to verify distribution" });
+    }
+  });
+
+  // Get payments
+  app.get("/api/payments", async (req: Request, res: Response) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
+      const payments = await storage.getPayments(limit);
+      res.json(payments);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch payments" });
+    }
+  });
+
+  // Get payments by student ID
+  app.get("/api/payments/student/:studentId", async (req: Request, res: Response) => {
+    try {
+      const { studentId } = req.params;
+      const payments = await storage.getPaymentsByStudentId(studentId);
+      res.json(payments);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch payments" });
+    }
+  });
+
+  // Process a payment
+  app.post("/api/payments/process", async (req: Request, res: Response) => {
+    try {
+      const paymentData = paymentProcessSchema.parse(req.body);
+      
+      // Check if student exists
+      const student = await storage.getStudentByStudentId(paymentData.studentId);
+      if (!student) {
+        return res.status(404).json({ error: "Student not found" });
+      }
+      
+      const payment = await storage.processPayment(paymentData);
+      
+      // Log the action
+      await storage.createLog({
+        studentId: payment.studentId,
+        action: "PROCESS_PAYMENT",
+        details: { payment },
+        stationName: "Cash Station",
+        operatorName: payment.operatorName,
+      });
+      
+      res.status(201).json(payment);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid payment data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to process payment" });
+    }
+  });
+
+  // Import students from CSV
+  app.post("/api/students/import", async (req: Request, res: Response) => {
+    try {
+      const { mappings, csvData, operatorName } = req.body;
+      
+      // Validate mappings
+      const validMappings = csvMappingSchema.parse(mappings);
+      
+      // Parse CSV data based on mappings
+      const parsedStudents = csvData.map((row: any) => {
+        return {
+          studentId: row[validMappings.studentIdField],
+          lastName: row[validMappings.lastNameField],
+          firstName: row[validMappings.firstNameField],
+          orderType: row[validMappings.orderTypeField],
+          orderNumber: row[validMappings.orderNumberField],
+          balanceDue: parseFloat(row[validMappings.balanceDueField]) || 0,
+          paymentStatus: row[validMappings.paymentStatusField],
+          yearbook: validMappings.yearbookField ? row[validMappings.yearbookField] === 'Yes' : false,
+          personalization: validMappings.personalizationField ? row[validMappings.personalizationField] === 'Yes' : false,
+          signaturePackage: validMappings.signaturePackageField ? row[validMappings.signaturePackageField] === 'Yes' : false,
+          clearCover: validMappings.clearCoverField ? row[validMappings.clearCoverField] === 'Yes' : false,
+          photoPockets: validMappings.photoPocketsField ? row[validMappings.photoPocketsField] === 'Yes' : false,
+          orderEnteredDate: new Date(),
+          photoUrl: null,
+        };
+      });
+      
+      // Import students
+      const importedStudents = await storage.importStudents(parsedStudents);
+      
+      // Log the action
+      await storage.createLog({
+        studentId: null,
+        action: "IMPORT_STUDENTS",
+        details: { count: importedStudents.length },
+        stationName: "Ruby Station",
+        operatorName,
+      });
+      
+      res.status(201).json({
+        imported: importedStudents.length,
+        students: importedStudents,
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid mapping data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to import students" });
+    }
+  });
+
+  // Issue a free book
+  app.post("/api/students/:studentId/free-book", async (req: Request, res: Response) => {
+    try {
+      const { studentId } = req.params;
+      const { operatorName } = req.body;
+      
+      if (!operatorName) {
+        return res.status(400).json({ error: "Operator name is required" });
+      }
+      
+      // Check if student exists
+      const student = await storage.getStudentByStudentId(studentId);
+      if (!student) {
+        return res.status(404).json({ error: "Student not found" });
+      }
+      
+      // Update student
+      const updatedStudent = await storage.updateStudent(student.id, {
+        balanceDue: 0,
+        paymentStatus: "Free",
+        yearbook: true,
+      });
+      
+      // Create a distribution
+      const distribution = await storage.createDistribution({
+        studentId,
+        operatorName,
+      });
+      
+      // Log the action
+      await storage.createLog({
+        studentId,
+        action: "ISSUE_FREE_BOOK",
+        details: { student: updatedStudent, distribution },
+        stationName: "Ruby Station",
+        operatorName,
+      });
+      
+      res.json({
+        student: updatedStudent,
+        distribution,
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to issue free book" });
+    }
+  });
+
+  return httpServer;
+}
