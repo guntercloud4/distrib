@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, Fragment } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -11,6 +11,7 @@ import { useWsLogs } from "@/hooks/use-ws-logs";
 import { socketProvider } from "@/lib/socket";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 interface RubyStationProps {
   operatorName: string;
@@ -257,7 +258,7 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
                                   { key: "clearCoverField", label: "Clear Cover" },
                                   { key: "photoPocketsField", label: "Photo Pockets" },
                                 ].map(field => (
-                                  <React.Fragment key={field.key}>
+                                  <Fragment key={field.key}>
                                     <div className="text-sm text-neutral-600">
                                       {field.label}
                                       {field.key.includes("Field") && !field.key.includes("yearbook") && !field.key.includes("personalization") && !field.key.includes("signature") && !field.key.includes("clear") && !field.key.includes("photo") && (
@@ -276,7 +277,7 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
                                         </option>
                                       ))}
                                     </select>
-                                  </React.Fragment>
+                                  </Fragment>
                                 ))}
                               </div>
                             </div>
