@@ -1,87 +1,70 @@
-import { useState } from "react";
-import { Header } from "@/components/header";
-import { Footer } from "@/components/footer";
-import { StationSelection } from "@/components/station-selection";
-import { StationLogin } from "@/components/station-login";
-import { RubyStationLogin } from "@/components/ruby-station-login";
 import { DistributionStation } from "@/components/distribution-station";
 import { CheckerStation } from "@/components/checker-station";
 import { CashStation } from "@/components/cash-station";
-import { RubyStation } from "@/components/ruby-station";
+import { RubyStation } from "@/components/ruby-station-new";
+import { StationSelection } from "@/components/station-selection";
+import { StationLogin } from "@/components/station-login";
+import { RubyStationLogin } from "@/components/ruby-station-login";
 import { useStationLogin } from "@/hooks/use-station-login";
+import { Header } from "@/components/header";
+import { Footer } from "@/components/footer";
+import "@/lib/init-fa";
 
 export default function HomePage() {
-  const {
+  const { 
     selectedStation,
-    showLoginForm,
     operatorName,
-    isLoggedIn,
-    rubyLoginError,
     selectStation,
-    handleLogin,
-    handleLogout,
-    goToStationSelection
+    loginOperator,
+    logoutOperator,
+    showError
   } = useStationLogin();
 
   return (
-    <>
+    <div className="min-h-screen flex flex-col">
       <Header operatorName={operatorName} />
       
-      <main className="flex-1">
-        {/* Show station selection if not logged in and not showing login form */}
-        {!isLoggedIn && !showLoginForm && (
+      <main className="flex-grow">
+        {!selectedStation ? (
           <StationSelection onSelectStation={selectStation} />
-        )}
-        
-        {/* Show login form for regular stations */}
-        {!isLoggedIn && showLoginForm && selectedStation !== "ruby" && (
-          <StationLogin 
-            stationType={selectedStation} 
-            onLogin={handleLogin} 
-            onBack={goToStationSelection}
-          />
-        )}
-        
-        {/* Show Ruby station login form */}
-        {!isLoggedIn && showLoginForm && selectedStation === "ruby" && (
-          <RubyStationLogin 
-            onLogin={handleLogin} 
-            onBack={goToStationSelection} 
-            showError={rubyLoginError}
-          />
-        )}
-        
-        {/* Show selected station when logged in */}
-        {isLoggedIn && selectedStation === "distribution" && (
+        ) : !operatorName ? (
+          selectedStation === "ruby" ? (
+            <RubyStationLogin
+              onLogin={loginOperator}
+              onBack={() => selectStation(null)}
+              showError={showError}
+            />
+          ) : (
+            <StationLogin
+              stationType={selectedStation}
+              onLogin={loginOperator}
+              onBack={() => selectStation(null)}
+            />
+          )
+        ) : selectedStation === "distribution" ? (
           <DistributionStation 
             operatorName={operatorName} 
-            onLogout={handleLogout}
+            onLogout={logoutOperator} 
           />
-        )}
-        
-        {isLoggedIn && selectedStation === "checker" && (
+        ) : selectedStation === "checker" ? (
           <CheckerStation 
             operatorName={operatorName} 
-            onLogout={handleLogout}
+            onLogout={logoutOperator} 
           />
-        )}
-        
-        {isLoggedIn && selectedStation === "cash" && (
+        ) : selectedStation === "cash" ? (
           <CashStation 
             operatorName={operatorName} 
-            onLogout={handleLogout}
+            onLogout={logoutOperator} 
           />
-        )}
-        
-        {isLoggedIn && selectedStation === "ruby" && (
-          <RubyStation 
-            operatorName={operatorName} 
-            onLogout={handleLogout}
+        ) : selectedStation === "ruby" ? (
+          <RubyStation
+            operatorName={operatorName}
+            onLogout={logoutOperator}
           />
-        )}
+        ) : null}
       </main>
       
       <Footer />
-    </>
+    </div>
   );
 }

@@ -10,7 +10,8 @@ import {
   faUser, faQrcode, faCheck, faMoneyBill, faCog, faSignOutAlt, 
   faSearch, faTimes, faSync, faExclamationTriangle, faCircleCheck, 
   faFileUpload, faDownload, faEdit, faTrash, faPlus,
-  faUserShield, faArrowLeft
+  faUserShield, faArrowLeft, faUserPlus, faHistory, faDatabase,
+  faCreditCard, faListAlt, faTachometerAlt, faTools
 } from '@fortawesome/free-solid-svg-icons';
 
 // Add FontAwesome icons to the library for global use
@@ -18,7 +19,8 @@ library.add(
   faUser, faQrcode, faCheck, faMoneyBill, faCog, faSignOutAlt, 
   faSearch, faTimes, faSync, faExclamationTriangle, faCircleCheck, 
   faFileUpload, faDownload, faEdit, faTrash, faPlus,
-  faUserShield, faArrowLeft
+  faUserShield, faArrowLeft, faUserPlus, faHistory, faDatabase,
+  faCreditCard, faListAlt, faTachometerAlt, faTools
 );
 
 createRoot(document.getElementById("root")!).render(

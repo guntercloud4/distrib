@@ -12,6 +12,8 @@ import { socketProvider } from "@/lib/socket";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CashStation } from "./cash-station";
 
 interface RubyStationProps {
   operatorName: string;
@@ -320,6 +322,66 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
     });
   };
 
+  // Handle logs export
+  const exportLogs = () => {
+    if (formattedLogs && formattedLogs.length > 0) {
+      // Format logs data for CSV export
+      const headers = [
+        "Timestamp", 
+        "Action", 
+        "Details", 
+        "Student ID", 
+        "Operator", 
+        "Station"
+      ].join(',');
+      
+      const rows = formattedLogs.map(log => {
+        return [
+          new Date(log.timestamp).toISOString(),
+          log.title,
+          log.details,
+          log.data.studentId || 'N/A',
+          log.data.operatorName || 'System',
+          log.station || 'N/A'
+        ].map(value => {
+          // Handle strings with commas by wrapping in quotes
+          if (typeof value === 'string' && value.includes(',')) {
+            return `"${value}"`;
+          }
+          return value;
+        }).join(',');
+      });
+      
+      const csv = [headers, ...rows].join('\n');
+      
+      // Create a download link
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `yearbook_logs_${new Date().toISOString().slice(0,10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      
+      // Clean up
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 100);
+      
+      toast({
+        title: "Logs Exported",
+        description: "System logs exported successfully.",
+      });
+    } else {
+      toast({
+        title: "No Logs",
+        description: "There are no logs to export.",
+        variant: "destructive"
+      });
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 fade-in">
       <div className="flex justify-between items-center mb-6">
@@ -329,13 +391,36 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
           onClick={onLogout}
           className="text-neutral-600 hover:text-neutral-800"
         >
-          <span className="material-icons text-base mr-1">logout</span>
+          <FontAwesomeIcon icon="sign-out-alt" className="mr-2" />
           Exit Station
         </Button>
       </div>
       
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        <div className="lg:col-span-3">
+      <Tabs defaultValue="database" className="w-full">
+        <TabsList className="mb-4 w-full justify-start">
+          <TabsTrigger value="database" className="data-[state=active]:bg-primary data-[state=active]:text-white">
+            <FontAwesomeIcon icon="database" className="mr-2" />
+            Student Database
+          </TabsTrigger>
+          <TabsTrigger value="scan" className="data-[state=active]:bg-primary data-[state=active]:text-white">
+            <FontAwesomeIcon icon="qrcode" className="mr-2" />
+            Scanner
+          </TabsTrigger>
+          <TabsTrigger value="pos" className="data-[state=active]:bg-primary data-[state=active]:text-white">
+            <FontAwesomeIcon icon="credit-card" className="mr-2" />
+            Cash POS
+          </TabsTrigger>
+          <TabsTrigger value="admin" className="data-[state=active]:bg-primary data-[state=active]:text-white">
+            <FontAwesomeIcon icon="tools" className="mr-2" />
+            Administration
+          </TabsTrigger>
+          <TabsTrigger value="logs" className="data-[state=active]:bg-primary data-[state=active]:text-white">
+            <FontAwesomeIcon icon="list-alt" className="mr-2" />
+            System Logs
+          </TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="database" className="border-none p-0 mt-0">
           <Card className="mb-6">
             <CardContent className="p-6">
               <div className="flex justify-between items-center mb-4">
