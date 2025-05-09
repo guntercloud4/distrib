@@ -39,7 +39,10 @@ import {
   faTrashAlt,
   faHistory,
   faUserCircle,
-  faImage
+  faImage,
+  faGem,
+  faCheckDouble,
+  faShieldAlt
 } from '@fortawesome/free-solid-svg-icons';
 
 // Add all icons to the library so you can use it in your page
@@ -83,5 +86,8 @@ library.add(
   faTrashAlt,
   faHistory,
   faUserCircle,
-  faImage
+  faImage,
+  faGem,
+  faCheckDouble,
+  faShieldAlt
 );

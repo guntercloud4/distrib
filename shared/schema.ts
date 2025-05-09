@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, varchar, numeric, json } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, varchar, numeric, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -27,7 +27,7 @@ export const actionLogs = pgTable("action_logs", {
   timestamp: timestamp("timestamp").notNull().defaultNow(),
   studentId: text("student_id"),
   action: text("action").notNull(),
-  details: json("details"),
+  details: jsonb("details"),
   stationName: text("station_name").notNull(),
   operatorName: text("operator_name").notNull(),
 });
@@ -50,9 +50,9 @@ export const payments = pgTable("payments", {
   studentId: text("student_id").notNull(),
   amountPaid: numeric("amount_paid").notNull(),
   operatorName: text("operator_name").notNull(),
-  bills: json("bills").notNull(),
+  bills: jsonb("bills").notNull(),
   changeDue: numeric("change_due").notNull(),
-  changeBills: json("change_bills").notNull(),
+  changeBills: jsonb("change_bills").notNull(),
 });
 
 // Insert schema types
