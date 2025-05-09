@@ -46,14 +46,22 @@ export async function initializeDatabase() {
         log('Database connection successful', 'database');
       }
 
-      // Push schema to database using drizzle-kit push
+      // Check if tables exist using direct SQL query
       try {
-        const { meta: { tables } } = await db.select().from(schema.students).limit(1).catch(() => ({ meta: { tables: null } }));
+        const tableCheckResult = await pool.query(`
+          SELECT EXISTS (
+            SELECT FROM information_schema.tables 
+            WHERE table_schema = 'public' 
+            AND table_name = 'students'
+          );
+        `);
+        
+        const tablesExist = tableCheckResult.rows[0]?.exists || false;
         
         // If tables don't exist yet, create them
-        if (!tables) {
-          log('Creating database tables using drizzle schema...', 'database');
-          // Use npm run db:push command in production
+        if (!tablesExist) {
+          log('Creating database tables using SQL...', 'database');
+          
           await pool.query(`
             CREATE TABLE IF NOT EXISTS students (
               id SERIAL PRIMARY KEY,
@@ -104,40 +112,32 @@ export async function initializeDatabase() {
               change_bills JSONB NOT NULL
             );
           `);
-        }
-      } catch (schemaError) {
-        log(`Schema push error: ${schemaError}`, 'database');
-        // Continue anyway - tables may exist already
-      }
-      
-      // Check if students table is empty - this suggests it's a new database
-      try {
-        const studentCount = await db.select().from(schema.students).count();
-        const isNewDb = parseInt(studentCount[0]?.count || '0') === 0;
-        
-        // Add system log only if it's a new setup
-        if (isNewDb) {
+          
+          // After creating tables, add a system log
           log('Database initialized successfully', 'database');
           
           try {
-            await db.insert(schema.actionLogs).values({
-              action: 'SYSTEM',
-              stationName: 'System',
-              operatorName: 'System',
-              details: { message: 'Database initialized successfully' }
-            });
+            await pool.query(`
+              INSERT INTO action_logs (action, station_name, operator_name, details) 
+              VALUES ('SYSTEM', 'System', 'System', '{"message": "Database initialized successfully"}')
+            `);
             return true;
           } catch (logError) {
             log(`Failed to add initialization log: ${logError}`, 'database');
             // Continue even if log entry fails
           }
+        } else {
+          log('Database tables already exist', 'database');
         }
         
         return true;  // Database is initialized and ready
-      } catch (error) {
-        log(`Database check error: ${error}`, 'database');
-        return false;
+      } catch (schemaError) {
+        log(`Schema check error: ${schemaError}`, 'database');
+        // Continue anyway - tables may exist already
       }
+      
+      // Default return if we get this far
+      return true;
     } catch (error) {
       log(`Database initialization error: ${error}`, 'database');
       retries--;
