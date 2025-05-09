@@ -298,10 +298,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const paymentData = paymentProcessSchema.parse(req.body);
       
-      // Check if student exists
-      const student = await storage.getStudentByStudentId(paymentData.studentId);
+      // Check if student exists, if not create one
+      let student = await storage.getStudentByStudentId(paymentData.studentId);
+      
       if (!student) {
-        return res.status(404).json({ error: "Student not found" });
+        // Extract first and last name from studentName
+        const nameParts = paymentData.studentName.split(' ');
+        const lastName = nameParts.length > 1 ? nameParts.pop() || '' : '';
+        const firstName = nameParts.join(' ');
+        
+        // Create a new student
+        student = await storage.createStudent({
+          studentId: paymentData.studentId,
+          firstName,
+          lastName,
+          orderEnteredDate: new Date(),
+          orderType: "Cash Payment",
+          orderNumber: `POS-${Date.now().toString().slice(-6)}`,
+          balanceDue: "0", // Will be updated after payment
+          paymentStatus: "Unpaid", // Will be updated after payment
+          yearbook: true,
+          personalization: false,
+          signaturePackage: false,
+          clearCover: false,
+          photoPockets: false,
+          photoUrl: null,
+        });
+        
+        // Log new student creation
+        const actionLog = await storage.createLog({
+          studentId: student.studentId,
+          action: "CREATE_STUDENT",
+          details: { student },
+          stationName: "Cash Station",
+          operatorName: paymentData.operatorName,
+        });
+        
+        // Broadcast student creation
+        broadcastMessage({
+          type: 'LOG_ACTION',
+          data: actionLog
+        });
       }
       
       const payment = await storage.processPayment(paymentData);

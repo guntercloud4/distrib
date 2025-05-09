@@ -69,9 +69,14 @@ export function LogsTab({ operatorName }: LogsTabProps) {
   
   // Filter logs based on search term and selected type
   const filteredLogs = logs?.filter(log => {
+    // Convert details to string if it's not already
+    const detailsStr = typeof log.details === 'object' 
+      ? JSON.stringify(log.details) 
+      : String(log.details || '');
+    
     const matchesSearch = searchTerm === "" || 
-      log.details.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      log.studentId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      detailsStr.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (log.studentId?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
       log.operatorName.toLowerCase().includes(searchTerm.toLowerCase());
       
     const matchesType = selectedType === null || log.action === selectedType;
@@ -208,7 +213,11 @@ export function LogsTab({ operatorName }: LogsTabProps) {
                             <span className="text-neutral-400">-</span>
                           )}
                         </TableCell>
-                        <TableCell className="max-w-md truncate">{log.details}</TableCell>
+                        <TableCell className="max-w-md truncate">
+                          {typeof log.details === 'object' 
+                            ? JSON.stringify(log.details).slice(0, 100) + (JSON.stringify(log.details).length > 100 ? '...' : '')
+                            : String(log.details || '')}
+                        </TableCell>
                         <TableCell>{log.operatorName}</TableCell>
                       </TableRow>
                     ))}

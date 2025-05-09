@@ -35,9 +35,12 @@ export function FreeBookTab({ operatorName }: FreeBookTabProps) {
   // Free book mutation
   const freeBookMutation = useMutation({
     mutationFn: async (data: { firstName: string, lastName: string, operatorName: string }) => {
+      // Generate a unique free student ID with a timestamp to avoid conflicts
+      const uniqueId = `FREE${Date.now().toString().slice(-7)}`;
+      
       // First, we'll create a student with the specified name
       const studentRes = await apiRequest('POST', '/api/students', {
-        studentId: "0000000",
+        studentId: uniqueId,
         firstName: data.firstName,
         lastName: data.lastName,
         orderType: "FREE",
@@ -187,7 +190,7 @@ export function FreeBookTab({ operatorName }: FreeBookTabProps) {
                 </div>
                 <div className="mt-6 text-sm text-neutral-500 border-t border-neutral-200 pt-4 w-full text-center">
                   <ul className="text-left list-disc list-inside">
-                    <li>Student ID will be set to 0000000</li>
+                    <li>Student ID is auto-generated with FREE prefix</li>
                     <li>Order type will be set to FREE</li>
                     <li>Sale number is auto-generated</li>
                     <li>Payment status will be Free</li>
