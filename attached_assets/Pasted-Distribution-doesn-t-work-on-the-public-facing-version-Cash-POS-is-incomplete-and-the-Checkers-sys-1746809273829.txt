@@ -1,0 +1,61 @@
+Distribution doesn’t work on the public-facing version, Cash POS is incomplete, and the Checkers system is broken. This next time around, fully overhaul the entire system.
+Start with Ruby Station:
+
+When importing a CSV, make it smart—match or closely match column names to expected fields and autofill dropdowns based on best guesses.
+
+The scanner under Ruby is perfect but needs to auto-focus the “Enter or scan student ID” textbox when the page loads.
+
+Cash POS: Fully remake it from scratch.
+
+Form should include:
+
+Student ID
+
+First Name
+
+Last Name
+
+Amount of cash given
+
+Price (default to 90, but editable)
+
+On submit, show a modal:
+
+“Sale Entered”
+
+Show ID, first/last name, order date, balance due
+
+Show change owed and break it down by bill denominations
+
+Free Book Management:
+
+Label: “Issue a complimentary book to someone without requiring payment.”
+
+Two fields: First Name and Last Name
+
+Auto-assign ID: 0000000
+
+Auto-generate a sale number
+
+Set Order Type: FREE
+
+System Logs tab:
+
+Fix "Filter by Action Type"—make it work by inserting a corresponding string into the "Search logs..." textbox automatically
+
+Student Database Overhaul:
+
+Rename to: Database
+
+Move Quick Actions section above the main table
+
+Paginate the list: 50 entries per page
+
+Change “Add new student” button to: “Add new entry”
+
+Add the Checkers system to Ruby Station (which is the one that when any distribution is made, it should pop up there in a table with litterally just a name, first and last, and a button to click "confirm" and when confirmed, they go to the "confirmed" tab inside of that one.
+
+Then copy each system created in Ruby (Scanning, Cash, Checkers) individually into the other stations so each has their own functional version.
+
+Every single detail above is important—nothing should be skipped or left out under any circumstances. Follow the entire prompt exactly.
+Also, logging out is broken, when you click log out your still logged in in the top right. please fix this.
