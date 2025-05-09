@@ -1,7 +1,7 @@
 import { DistributionStation } from "@/components/distribution-station";
 import { CheckerStation } from "@/components/checker-station";
 import { CashStation } from "@/components/cash-station";
-import { RubyStation } from "@/components/ruby-station-new";
+import { RubyStation } from "@/components/ruby-station";
 import { StationSelection } from "@/components/station-selection";
 import { StationLogin } from "@/components/station-login";
 import { RubyStationLogin } from "@/components/ruby-station-login";
