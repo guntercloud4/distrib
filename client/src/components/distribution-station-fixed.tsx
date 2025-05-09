@@ -1,22 +1,24 @@
-import React, { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  Card,
+  CardContent,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
-import { Student } from "@shared/schema";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { handleScannerEnter } from "@/lib/utils";
-import { socketProvider } from "@/lib/socket";
-import { 
+import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogFooter
+  DialogFooter,
 } from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
+import { socketProvider } from "@/lib/socket";
+import { apiRequest } from "@/lib/queryClient";
+import { Student, InsertDistribution } from "@shared/schema";
+import { StudentInfo } from "./student-info";
 import { RecentActivity } from "./recent-activity";
 
 interface DistributionStationProps {
@@ -26,298 +28,293 @@ interface DistributionStationProps {
 
 export function DistributionStation({ operatorName, onLogout }: DistributionStationProps) {
   const [studentId, setStudentId] = useState("");
-  const [scannedStudentId, setScannedStudentId] = useState<string | null>(null);
+  const [scannedId, setScannedId] = useState<string | null>(null);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
-  // Auto-focus the input field when the component mounts
+  // Auto-focus the input field when the component mounts or refreshes
   useEffect(() => {
     if (inputRef.current) {
       inputRef.current.focus();
     }
   }, []);
 
-  // Re-focus the input field when needed
+  // Re-focus the input field after operations are complete
   useEffect(() => {
-    // Set a timeout to allow any dialogs to close first
-    const timeoutId = setTimeout(() => {
-      if (inputRef.current) {
-        inputRef.current.focus();
-      }
-    }, 300);
-    
-    return () => clearTimeout(timeoutId);
-  }, [scannedStudentId, showSuccessDialog]);
+    if (!isScanning && !showSuccessDialog && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [isScanning, showSuccessDialog]);
 
   // Fetch student by ID
   const { 
     data: student,
     isLoading: studentLoading,
     isError: studentError,
-    error: studentErrorData,
-    refetch: refetchStudent
+    error: studentErrorData
   } = useQuery<Student>({
-    queryKey: ['/api/students', scannedStudentId],
-    queryFn: async () => {
-      if (!scannedStudentId) return null;
-      const res = await fetch(`/api/students/${scannedStudentId}`);
-      if (!res.ok) {
-        throw new Error("Student not found");
-      }
-      return res.json();
-    },
-    enabled: !!scannedStudentId,
+    queryKey: ['/api/students', scannedId],
+    enabled: !!scannedId,
     staleTime: 10000, // 10 seconds
     retry: false
   });
 
-  // Distribution mutation
+  // Distribute mutation
   const distributeMutation = useMutation({
-    mutationFn: async ({ studentId, operatorName }: { studentId: string, operatorName: string }) => {
-      const res = await apiRequest('POST', '/api/distributions', { 
-        studentId,
-        operatorName 
-      });
-      return await res.json();
+    mutationFn: async (distribution: InsertDistribution) => {
+      const res = await apiRequest('POST', '/api/distributions', distribution);
+      return res.json();
     },
     onSuccess: (data) => {
+      // Reset state
       setShowSuccessDialog(true);
+      setIsScanning(false);
+      
+      // Show success message
+      toast({
+        title: "Distribution recorded",
+        description: `Yearbook distributed to ${student?.firstName} ${student?.lastName}`,
+      });
       
       // Log the action via WebSocket
       socketProvider.send({
-        type: 'LOG_ACTION',
+        type: 'NEW_DISTRIBUTION',
         data: {
-          id: Date.now(),
-          timestamp: new Date(),
-          studentId: scannedStudentId,
-          action: 'DISTRIBUTE',
-          details: { },
-          stationName: 'Distribution Station',
-          operatorName
+          ...data,
+          studentId: student?.studentId
         }
       });
       
-      // Broadcast the new distribution via WebSocket
-      socketProvider.send({
-        type: 'NEW_DISTRIBUTION',
-        data: data
-      });
+      // Invalidate queries
+      queryClient.invalidateQueries({ queryKey: ['/api/distributions'] });
     },
     onError: (error: Error) => {
+      setIsScanning(false);
       toast({
-        title: "Distribution Failed",
+        title: "Distribution failed",
         description: error.message,
         variant: "destructive"
       });
     }
   });
 
-  // Handle scan
-  const handleScan = (value: string) => {
-    setScannedStudentId(value);
-  };
-
-  // Handle scan form submit
+  // Handle form submit
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (studentId) {
+    if (studentId.trim()) {
       handleScan(studentId);
     }
   };
 
-  // Handle distribute
+  // Handle scanner input
+  const handleScan = (value: string) => {
+    if (!value.trim()) return;
+    
+    setIsScanning(true);
+    setScannedId(value);
+    setStudentId("");
+  };
+
+  // Handle scanner enter key press
+  const handleScannerEnter = (e: React.KeyboardEvent, callback: () => void) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      callback();
+    }
+  };
+
+  // Handle distribution
   const handleDistribute = () => {
-    if (!scannedStudentId) return;
+    if (!student) return;
     
     distributeMutation.mutate({
-      studentId: scannedStudentId,
-      operatorName
+      studentId: student.id,
+      distributedBy: operatorName,
+      timestamp: new Date(),
+      verified: false
     });
   };
 
-  // Handle new scan after distribution
-  const handleNewScan = () => {
-    setStudentId("");
-    setScannedStudentId(null);
+  // Start a new distribution
+  const handleNewDistribution = () => {
     setShowSuccessDialog(false);
-    
-    // Re-focus the input
+    setScannedId(null);
+    setStudentId("");
     if (inputRef.current) {
       inputRef.current.focus();
     }
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 fade-in">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-semibold text-neutral-800">Distribution Station</h2>
-        <Button 
-          variant="outline" 
-          onClick={onLogout}
-          className="text-neutral-600 hover:text-neutral-800"
-        >
-          <FontAwesomeIcon icon="sign-out-alt" className="mr-2" />
-          Exit Station
-        </Button>
-      </div>
-      
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <Card className="mb-6">
-            <CardContent className="p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-medium text-neutral-800">Yearbook Distribution</h3>
+    <div className="flex flex-col min-h-screen">
+      <main className="flex-1 container mx-auto py-6 px-4">
+        <Card className="mb-6">
+          <CardContent className="p-6">
+            <div className="flex flex-col md:flex-row justify-between items-center mb-6">
+              <div>
+                <h2 className="text-2xl font-bold text-neutral-800">Distribution Station</h2>
+                <p className="text-neutral-500">Scan student IDs to distribute yearbooks</p>
               </div>
               
-              <div className="bg-white border border-neutral-200 rounded-lg p-6 shadow-sm">
-                <div className="text-center mb-6">
-                  <div className="h-16 w-16 rounded-full flex items-center justify-center bg-blue-100 text-blue-600 mx-auto mb-4">
-                    <FontAwesomeIcon icon="qrcode" size="2x" />
-                  </div>
-                  <h4 className="text-xl font-medium mb-2">Scan Student ID</h4>
-                  <p className="text-neutral-600">
-                    Scan a student ID to distribute a yearbook.
-                  </p>
-                </div>
-                
-                <form onSubmit={handleSubmit} className="mb-6">
-                  <div className="relative mb-4">
-                    <Input
-                      ref={inputRef}
-                      type="text"
-                      value={studentId}
-                      onChange={(e) => setStudentId(e.target.value)}
-                      onKeyDown={(e) => handleScannerEnter(e, () => handleScan(studentId))}
-                      placeholder="Enter or scan student ID"
-                      className="w-full text-center py-6 text-lg"
-                      autoFocus
-                    />
-                    <Button
-                      type="submit"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-2 top-1/2 transform -translate-y-1/2"
-                    >
-                      <FontAwesomeIcon icon="search" />
-                    </Button>
-                  </div>
-                  <Button type="submit" className="w-full py-6">
-                    <FontAwesomeIcon icon="search" className="mr-2" />
-                    Find Student
-                  </Button>
-                </form>
-                
-                {/* Loading state */}
-                {studentLoading && (
-                  <div className="text-center p-4">
-                    <FontAwesomeIcon icon="sync" className="animate-spin text-primary mb-2" size="2x" />
-                    <p>Searching for student...</p>
-                  </div>
-                )}
-                
-                {/* Error state */}
-                {studentError && (
-                  <div className="text-center p-4 bg-red-50 border border-red-200 rounded-lg">
-                    <FontAwesomeIcon icon="exclamation-triangle" className="text-red-500 mb-2" size="2x" />
-                    <p className="text-red-600">{(studentErrorData as Error).message || "Student not found"}. Please try again.</p>
-                  </div>
-                )}
-                
-                {/* Student found */}
-                {student && !showSuccessDialog && (
-                  <div className="border border-neutral-200 rounded-lg p-4 mb-4">
-                    <h5 className="font-medium text-lg mb-2">Student Information</h5>
-                    <div className="grid grid-cols-2 gap-y-2 mb-4">
-                      <div className="text-neutral-600">Student ID:</div>
-                      <div className="font-medium">{student.studentId}</div>
-                      <div className="text-neutral-600">Name:</div>
-                      <div className="font-medium">{student.firstName} {student.lastName}</div>
-                      <div className="text-neutral-600">Order Type:</div>
-                      <div className="font-medium">{student.orderType || 'N/A'}</div>
-                      <div className="text-neutral-600">Payment Status:</div>
-                      <div className="font-medium">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
-                          ${student.paymentStatus.toLowerCase() === 'paid' ? 'bg-green-100 text-green-800' : ''}
-                          ${student.paymentStatus.toLowerCase() === 'unpaid' ? 'bg-yellow-100 text-yellow-800' : ''}
-                          ${student.paymentStatus.toLowerCase() === 'free' ? 'bg-blue-100 text-blue-800' : ''}
-                        `}>
-                          {student.paymentStatus}
-                        </span>
+              <Button variant="outline" onClick={onLogout} className="mt-4 md:mt-0">
+                <FontAwesomeIcon icon="sign-out-alt" className="mr-2" />
+                Logout
+              </Button>
+            </div>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-1">
+                <div className="bg-white border border-neutral-200 rounded-lg p-4 shadow-sm">
+                  <form onSubmit={handleSubmit}>
+                    <div className="space-y-4">
+                      <div>
+                        <label htmlFor="student-id" className="block text-sm font-medium text-neutral-700 mb-1">
+                          Scan Student ID
+                        </label>
+                        <div className="relative">
+                          <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-neutral-500">
+                            <FontAwesomeIcon icon="barcode" />
+                          </span>
+                          <Input
+                            id="student-id"
+                            ref={inputRef}
+                            className="pl-10"
+                            placeholder="Scan or type ID..."
+                            value={studentId}
+                            onChange={(e) => setStudentId(e.target.value)}
+                            onKeyDown={(e) => handleScannerEnter(e, () => handleScan(studentId))}
+                            disabled={isScanning || distributeMutation.isPending}
+                          />
+                        </div>
                       </div>
-                    </div>
-                    
-                    <div className="flex justify-end">
-                      <Button
-                        onClick={handleDistribute}
-                        disabled={distributeMutation.isPending}
-                        className="bg-primary hover:bg-primary-dark"
+                      
+                      <Button 
+                        type="button" 
+                        onClick={() => handleScan(studentId)}
+                        disabled={!studentId.trim() || isScanning || distributeMutation.isPending}
+                        className="w-full"
                       >
-                        {distributeMutation.isPending ? (
+                        {isScanning ? (
                           <>
-                            <FontAwesomeIcon icon="sync" className="mr-2 animate-spin" />
-                            Processing...
+                            <FontAwesomeIcon icon="spinner" className="animate-spin mr-2" />
+                            Scanning...
                           </>
                         ) : (
                           <>
-                            <FontAwesomeIcon icon="check" className="mr-2" />
-                            Distribute Yearbook
+                            <FontAwesomeIcon icon="search" className="mr-2" />
+                            Find Student
                           </>
                         )}
                       </Button>
                     </div>
+                  </form>
+                </div>
+                
+                <RecentActivity stationType="distribution" />
+              </div>
+              
+              <div className="lg:col-span-2">
+                {studentLoading ? (
+                  <div className="flex items-center justify-center h-64 bg-white border border-neutral-200 rounded-lg">
+                    <div className="text-center">
+                      <FontAwesomeIcon icon="spinner" className="animate-spin text-3xl text-neutral-400 mb-2" />
+                      <p className="text-neutral-600">Loading student information...</p>
+                    </div>
+                  </div>
+                ) : studentError ? (
+                  <div className="flex items-center justify-center h-64 bg-white border border-neutral-200 rounded-lg">
+                    <div className="text-center p-6">
+                      <FontAwesomeIcon icon="exclamation-circle" className="text-3xl text-red-500 mb-2" />
+                      <h3 className="text-lg font-medium text-neutral-800 mb-1">Student Not Found</h3>
+                      <p className="text-neutral-600 mb-4">
+                        We couldn't find a student with ID "{scannedId}". Please check the ID and try again.
+                      </p>
+                      <Button variant="outline" onClick={handleNewDistribution}>
+                        Try Again
+                      </Button>
+                    </div>
+                  </div>
+                ) : student ? (
+                  <div className="bg-white border border-neutral-200 rounded-lg shadow-sm overflow-hidden">
+                    <div className="p-6">
+                      <h3 className="text-lg font-medium text-neutral-800 mb-4">Student Information</h3>
+                      
+                      <StudentInfo 
+                        student={student} 
+                        showActions={true}
+                        actionButton={
+                          <Button 
+                            onClick={handleDistribute} 
+                            disabled={distributeMutation.isPending}
+                            className="mt-4 w-full"
+                          >
+                            {distributeMutation.isPending ? (
+                              <>
+                                <FontAwesomeIcon icon="spinner" className="animate-spin mr-2" />
+                                Processing...
+                              </>
+                            ) : (
+                              <>
+                                <FontAwesomeIcon icon="book" className="mr-2" />
+                                Distribute Yearbook
+                              </>
+                            )}
+                          </Button>
+                        }
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center h-64 bg-white border border-neutral-200 rounded-lg">
+                    <div className="text-center p-6">
+                      <FontAwesomeIcon icon="barcode" className="text-5xl text-neutral-300 mb-3" />
+                      <h3 className="text-lg font-medium text-neutral-800 mb-1">No Student Selected</h3>
+                      <p className="text-neutral-600">
+                        Scan a student ID barcode or enter an ID number to begin distribution.
+                      </p>
+                    </div>
                   </div>
                 )}
               </div>
-            </CardContent>
-          </Card>
-        </div>
-        
-        {/* Recent Activity */}
-        <div>
-          <h3 className="text-lg font-medium text-neutral-800 mb-4">Recent Activity</h3>
-          <RecentActivity stationType="distribution" />
-        </div>
-      </div>
-      
+            </div>
+          </CardContent>
+        </Card>
+      </main>
+
       {/* Success Dialog */}
       <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
-        <DialogContent className="max-w-md">
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle className="text-center text-xl text-green-600">
-              <FontAwesomeIcon icon="check-circle" className="mr-2" />
-              Distribution Successful
-            </DialogTitle>
-            <DialogDescription className="text-center">
-              Yearbook has been distributed to the student
-            </DialogDescription>
+            <DialogTitle>Yearbook Distributed</DialogTitle>
           </DialogHeader>
           
-          {student && (
-            <div className="py-4">
-              <div className="bg-neutral-50 rounded-lg p-4 mb-4">
-                <div className="grid grid-cols-2 gap-y-2">
-                  <div className="text-neutral-600">Student ID:</div>
-                  <div className="font-medium">{student.studentId}</div>
-                  <div className="text-neutral-600">Student:</div>
-                  <div className="font-medium">{student.firstName} {student.lastName}</div>
-                  <div className="text-neutral-600">Order Type:</div>
-                  <div className="font-medium">{student.orderType || 'N/A'}</div>
-                  <div className="text-neutral-600">Distributed By:</div>
-                  <div className="font-medium">{operatorName}</div>
-                </div>
+          <div className="py-6">
+            <div className="flex items-center justify-center">
+              <div className="h-16 w-16 rounded-full bg-green-100 flex items-center justify-center">
+                <FontAwesomeIcon icon="check" className="text-2xl text-green-600" />
               </div>
             </div>
-          )}
+            
+            <div className="text-center mt-4">
+              <h3 className="text-lg font-medium">
+                Yearbook distributed to {student?.firstName} {student?.lastName}
+              </h3>
+              <p className="text-neutral-600 mt-2">
+                Student ID: {student?.studentId}
+              </p>
+              <p className="text-neutral-600">
+                Distributed by: {operatorName}
+              </p>
+            </div>
+          </div>
           
           <DialogFooter>
-            <Button 
-              onClick={handleNewScan} 
-              className="w-full"
-              autoFocus
-            >
-              <FontAwesomeIcon icon="qrcode" className="mr-2" />
+            <Button onClick={handleNewDistribution}>
+              <FontAwesomeIcon icon="barcode" className="mr-2" />
               Scan Next Student
             </Button>
           </DialogFooter>
