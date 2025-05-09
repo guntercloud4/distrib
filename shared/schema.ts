@@ -11,7 +11,7 @@ export const students = pgTable("students", {
   orderEnteredDate: timestamp("order_entered_date").notNull().defaultNow(),
   orderType: text("order_type").notNull(),
   orderNumber: text("order_number").notNull(),
-  balanceDue: numeric("balance_due").notNull(),
+  balanceDue: numeric("balance_due", { precision: 10, scale: 2 }).notNull(),
   paymentStatus: text("payment_status").notNull(),
   yearbook: boolean("yearbook").notNull().default(false),
   personalization: boolean("personalization").notNull().default(false),
@@ -56,9 +56,15 @@ export const payments = pgTable("payments", {
 });
 
 // Insert schema types
-export const insertStudentSchema = createInsertSchema(students).omit({
-  id: true,
-});
+export const insertStudentSchema = createInsertSchema(students)
+  .omit({
+    id: true,
+  })
+  .extend({
+    balanceDue: z.union([z.string(), z.number()]).transform(val => 
+      typeof val === 'string' ? val : val.toString()
+    ),
+  });
 
 export const insertActionLogSchema = createInsertSchema(actionLogs).omit({
   id: true,
