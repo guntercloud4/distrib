@@ -217,13 +217,15 @@ export function ScannerTab({ operatorName }: ScannerTabProps) {
                       <div className="mr-4">
                         <div className="w-24 h-24 bg-neutral-100 rounded overflow-hidden flex items-center justify-center">
                           {(() => {
-                            // Create image URL from student data
-                            const imageUrl = `https://cdn.gunter.cloud/faces/${student.lastName.toLowerCase()}_${student.firstName.toLowerCase()}.jpg`;
+                            // Create image URL from student data only if both names exist
+                            const firstName = student.firstName || '';
+                            const lastName = student.lastName || '';
+                            const imageUrl = `https://cdn.gunter.cloud/faces/${lastName.toLowerCase()}_${firstName.toLowerCase()}.jpg`;
                             
                             return (
                               <img 
                                 src={imageUrl}
-                                alt={`${student.firstName} ${student.lastName}`}
+                                alt={`${firstName} ${lastName}`}
                                 className="object-cover w-full h-full"
                                 onError={(e) => {
                                   // If image fails to load, show placeholder with icon
