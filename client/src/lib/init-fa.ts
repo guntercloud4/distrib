@@ -42,7 +42,12 @@ import {
   faImage,
   faGem,
   faCheckDouble,
-  faShieldAlt
+  faShieldAlt,
+  faFileAlt,
+  faFileExport,
+  faTable,
+  faDatabase as faStorage,
+  faSpinner as faLoading
 } from '@fortawesome/free-solid-svg-icons';
 
 // Add all icons to the library so you can use it in your page
@@ -89,5 +94,10 @@ library.add(
   faImage,
   faGem,
   faCheckDouble,
-  faShieldAlt
+  faShieldAlt,
+  faFileAlt,
+  faFileExport,
+  faTable,
+  faStorage,
+  faLoading
 );

@@ -28,7 +28,7 @@ export function StationSelection({ onSelectStation }: StationSelectionProps) {
           onClick={() => onSelectStation('checker')}
         >
           <div className="flex items-center justify-center h-12 w-12 rounded-md bg-secondary text-white mb-4">
-            <FontAwesomeIcon icon="cash-register" />
+            <FontAwesomeIcon icon="file-alt" />
           </div>
           <h3 className="text-lg font-medium text-neutral-800">Checkers Station</h3>
           <p className="mt-2 text-sm text-neutral-600">Verify yearbook deliveries and record checkoffs</p>

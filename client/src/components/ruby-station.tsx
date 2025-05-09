@@ -47,8 +47,8 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
                   <span className="hidden md:inline">Database</span>
                 </TabsTrigger>
                 <TabsTrigger value="data">
-                  <FontAwesomeIcon icon="table" className="mr-2" />
-                  <span className="hidden md:inline">Data</span>
+                  <FontAwesomeIcon icon="storage" className="mr-2" />
+                  <span className="hidden md:inline font-normal">Data</span>
                 </TabsTrigger>
                 <TabsTrigger value="scanner">
                   <FontAwesomeIcon icon="barcode" className="mr-2" />

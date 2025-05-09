@@ -1,866 +1,401 @@
-import { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from "@/components/ui/table";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle,
-  DialogDescription,
-  DialogFooter
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+import React, { useState, useMemo, useEffect } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { 
-  Form, 
-  FormControl, 
-  FormField, 
-  FormItem, 
-  FormLabel, 
-  FormMessage 
-} from "@/components/ui/form";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
+import { Card, CardContent } from "@/components/ui/card";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { apiRequest } from "../../lib/queryClient";
-import { type Student, insertStudentSchema } from "@shared/schema";
+import { useToast } from "@/hooks/use-toast";
+import { socketProvider } from "@/lib/socket";
+import { apiRequest } from "@/lib/queryClient";
+import { parseCSV } from "@/lib/utils";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogHeader,
+  DialogFooter,
+} from "@/components/ui/dialog";
+
+// Auto-detect function to map CSV fields to database fields
+const autoMapCsvFields = (headers: string[]) => {
+  const mappings: Record<string, string> = {};
+  const possibleMappings: Record<string, string[]> = {
+    studentIdField: ["student id", "id", "studentid", "student_id", "student-id"],
+    lastNameField: ["last name", "lastname", "last", "surname", "family name", "family_name"],
+    firstNameField: ["first name", "firstname", "first", "given name", "given_name"],
+    orderTypeField: ["order type", "ordertype", "type", "order_type"],
+    orderNumberField: ["order number", "ordernumber", "order_number", "order #", "order no"],
+    balanceDueField: ["balance due", "balancedue", "balance", "amount due", "amount", "balance_due"],
+    paymentStatusField: ["payment status", "paymentstatus", "status", "payment_status"],
+    yearbookField: ["yearbook", "has yearbook", "yearbook_ordered"],
+    personalizationField: ["personalization", "personalized", "name on cover", "has_personalization"],
+    signaturePackageField: ["signature package", "signature", "signatures", "has_signature_package"],
+    clearCoverField: ["clear cover", "clear_cover", "has_clear_cover"],
+    photoPocketsField: ["photo pockets", "photos", "pockets", "has_photo_pockets"],
+  };
+
+  // For each field we need to map, check if any of the possible header values exist in our CSV headers
+  Object.entries(possibleMappings).forEach(([field, possibleValues]) => {
+    // Try to find an exact match first (case-insensitive)
+    const exactMatch = headers.find(header => 
+      possibleValues.includes(header.toLowerCase())
+    );
+    
+    if (exactMatch) {
+      mappings[field] = exactMatch;
+      return;
+    }
+    
+    // If no exact match, try partial match
+    const partialMatch = headers.find(header => 
+      possibleValues.some(value => header.toLowerCase().includes(value))
+    );
+    
+    if (partialMatch) {
+      mappings[field] = partialMatch;
+    }
+  });
+  
+  return mappings;
+};
 
 interface DataTabProps {
   operatorName: string;
 }
 
-const studentFormSchema = insertStudentSchema.extend({
-  balanceDue: z.union([z.string(), z.number()]).transform(val => 
-    typeof val === 'string' ? val : val.toString()
-  ),
-});
-
-type StudentFormValues = z.infer<typeof studentFormSchema>;
-
 export function DataTab({ operatorName }: DataTabProps) {
-  const [editingStudent, setEditingStudent] = useState<Student | null>(null);
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [imgError, setImgError] = useState<Record<number, boolean>>({});
-  
-  const queryClient = useQueryClient();
-  
-  // Fetch all students
-  const { data: students = [] as Student[], isLoading, error } = useQuery<Student[]>({
+  const { toast } = useToast();
+  const [csvContent, setCsvContent] = useState<string>("");
+  const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
+  const [csvMappings, setCsvMappings] = useState<Record<string, string>>({});
+  const [showCsvDialog, setShowCsvDialog] = useState(false);
+  const [previewData, setPreviewData] = useState<any[]>([]);
+
+  // Required fields
+  const requiredFields = useMemo(() => [
+    { key: "studentIdField", label: "Student ID *" },
+    { key: "lastNameField", label: "Last Name *" },
+    { key: "firstNameField", label: "First Name *" },
+    { key: "orderTypeField", label: "Order Type *" },
+    { key: "orderNumberField", label: "Order Number *" },
+    { key: "balanceDueField", label: "Balance Due *" },
+    { key: "paymentStatusField", label: "Payment Status *" },
+  ], []);
+
+  // Optional fields
+  const optionalFields = useMemo(() => [
+    { key: "yearbookField", label: "Yearbook" },
+    { key: "personalizationField", label: "Personalization" },
+    { key: "signaturePackageField", label: "Signature Package" },
+    { key: "clearCoverField", label: "Clear Cover" },
+    { key: "photoPocketsField", label: "Photo Pockets" },
+  ], []);
+
+  // Load Students
+  const { refetch: refetchStudents, isLoading: studentsLoading } = useQuery({
     queryKey: ['/api/students'],
-    refetchInterval: 5000
+    enabled: false,
   });
-  
-  // Edit student mutation
-  const editStudentMutation = useMutation({
-    mutationFn: async (data: StudentFormValues & { id: number }) => {
-      const { id, ...studentData } = data;
-      return apiRequest(
-        'PUT',
-        `/api/students/${id}`,
-        { ...studentData, operatorName }
-      );
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/students'] });
-      setEditingStudent(null);
+
+  // Handle CSV file upload
+  const handleCsvFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const csvText = event.target?.result as string;
+      setCsvContent(csvText);
+      
+      // Parse the CSV to get headers and preview data
+      const parsedData = parseCSV(csvText);
+      if (parsedData.length > 0) {
+        const headers = Object.keys(parsedData[0]);
+        setCsvHeaders(headers);
+        
+        // Auto-detect and map the CSV fields
+        const autoMappings = autoMapCsvFields(headers);
+        setCsvMappings(autoMappings);
+        
+        // Set preview data (first 3 rows)
+        setPreviewData(parsedData.slice(0, 3));
+      }
+    };
+    reader.readAsText(file);
+    setShowCsvDialog(true);
+  };
+
+  // Handle CSV mapping selection
+  const handleMappingSelect = (field: string, header: string) => {
+    setCsvMappings(prev => ({
+      ...prev,
+      [field]: header
+    }));
+  };
+
+  // Process CSV import
+  const processCsvImport = () => {
+    if (!csvContent || Object.keys(csvMappings).length < 7) {
+      toast({
+        title: "Mapping Required",
+        description: "Please map all required fields before importing.",
+        variant: "destructive"
+      });
+      return;
     }
-  });
-  
-  // Add student mutation
-  const addStudentMutation = useMutation({
-    mutationFn: async (data: StudentFormValues) => {
-      return apiRequest(
-        'POST',
-        '/api/students',
-        { ...data, operatorName }
-      );
+    
+    const parsedData = parseCSV(csvContent);
+    csvMutation.mutate({
+      mappings: csvMappings,
+      csvData: parsedData,
+      operatorName
+    });
+  };
+
+  // CSV upload mutation
+  const csvMutation = useMutation({
+    mutationFn: async (data: { mappings: Record<string, string>, csvData: any[], operatorName: string }) => {
+      const res = await apiRequest('POST', '/api/students/import', data);
+      return await res.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/students'] });
-      setIsAddDialogOpen(false);
-      form.reset();
+    onSuccess: (data) => {
+      toast({
+        title: "CSV Import Successful",
+        description: `Successfully imported ${data.imported} students.`,
+      });
+      
+      // Log the action via WebSocket
+      socketProvider.send({
+        type: 'LOG_ACTION',
+        data: {
+          id: Date.now(),
+          timestamp: new Date(),
+          studentId: null,
+          action: 'IMPORT_STUDENTS',
+          details: { count: data.imported },
+          stationName: 'Ruby Station',
+          operatorName
+        }
+      });
+      
+      // Close dialog and reset form
+      setShowCsvDialog(false);
+      setCsvContent("");
+      setCsvMappings({});
+      setCsvHeaders([]);
+      setPreviewData([]);
+      
+      // Refetch students to update the table
+      refetchStudents();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "CSV Import Failed",
+        description: error.message,
+        variant: "destructive"
+      });
     }
   });
 
-  // Delete student mutation
-  const deleteStudentMutation = useMutation({
-    mutationFn: async (id: number) => {
-      return apiRequest(
-        'DELETE',
-        `/api/students/${id}`,
-        { operatorName }
-      );
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/students'] });
-    }
-  });
-  
-  // Setup form with default values if editing a student
-  const form = useForm<StudentFormValues>({
-    resolver: zodResolver(studentFormSchema),
-    defaultValues: editingStudent ? {
-      studentId: editingStudent.studentId,
-      firstName: editingStudent.firstName,
-      lastName: editingStudent.lastName,
-      orderType: editingStudent.orderType,
-      orderNumber: editingStudent.orderNumber,
-      balanceDue: editingStudent.balanceDue,
-      paymentStatus: editingStudent.paymentStatus,
-      yearbook: editingStudent.yearbook,
-      personalization: editingStudent.personalization,
-      signaturePackage: editingStudent.signaturePackage,
-      clearCover: editingStudent.clearCover,
-      photoPockets: editingStudent.photoPockets,
-      photoUrl: editingStudent.photoUrl || "",
-    } : {
-      studentId: "",
-      firstName: "",
-      lastName: "",
-      orderType: "Standard",
-      orderNumber: "",
-      balanceDue: "0",
-      paymentStatus: "Unpaid",
-      yearbook: false,
-      personalization: false,
-      signaturePackage: false,
-      clearCover: false,
-      photoPockets: false,
-      photoUrl: "",
-    }
-  });
-  
-  // Update form values when editing student changes
-  useEffect(() => {
-    if (editingStudent) {
-      form.reset({
-        studentId: editingStudent.studentId,
-        firstName: editingStudent.firstName,
-        lastName: editingStudent.lastName,
-        orderType: editingStudent.orderType,
-        orderNumber: editingStudent.orderNumber,
-        balanceDue: editingStudent.balanceDue,
-        paymentStatus: editingStudent.paymentStatus,
-        yearbook: editingStudent.yearbook,
-        personalization: editingStudent.personalization,
-        signaturePackage: editingStudent.signaturePackage,
-        clearCover: editingStudent.clearCover,
-        photoPockets: editingStudent.photoPockets,
-        photoUrl: typeof editingStudent.photoUrl === 'string' ? editingStudent.photoUrl : "",
-      });
-    } else if (isAddDialogOpen) {
-      form.reset({
-        studentId: "",
-        firstName: "",
-        lastName: "",
-        orderType: "Standard",
-        orderNumber: "",
-        balanceDue: "0",
-        paymentStatus: "Unpaid",
-        yearbook: false,
-        personalization: false,
-        signaturePackage: false,
-        clearCover: false,
-        photoPockets: false,
-        photoUrl: "",
-      });
-    }
-  }, [editingStudent, isAddDialogOpen, form]);
-  
-  // Handle form submission
-  function onSubmit(data: StudentFormValues) {
-    if (editingStudent) {
-      editStudentMutation.mutate({
-        ...data,
-        id: editingStudent.id
-      });
-    } else {
-      addStudentMutation.mutate(data);
-    }
-  }
-  
-  // Filter students based on search term
-  const filteredStudents = students.filter((student: Student) => {
-    const searchLower = searchTerm.toLowerCase();
-    return (
-      student.studentId.toLowerCase().includes(searchLower) ||
-      student.firstName.toLowerCase().includes(searchLower) ||
-      student.lastName.toLowerCase().includes(searchLower) ||
-      student.orderType.toLowerCase().includes(searchLower) ||
-      student.orderNumber.toLowerCase().includes(searchLower) ||
-      student.paymentStatus.toLowerCase().includes(searchLower)
-    );
-  });
-  
   return (
-    <div>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-xl font-bold">Student Data</CardTitle>
-          <div className="flex space-x-2">
-            <div className="relative">
-              <FontAwesomeIcon 
-                icon="search" 
-                className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" 
-              />
-              <Input
-                type="search"
-                placeholder="Search students..."
-                className="w-64 pl-8"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-            <Button onClick={() => setIsAddDialogOpen(true)}>
-              <FontAwesomeIcon icon="plus" className="mr-2" />
-              Add Entry
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="flex justify-center p-4">
-              <FontAwesomeIcon icon="spinner" spin className="text-2xl" />
-            </div>
-          ) : error ? (
-            <div className="text-center text-red-500 p-4">
-              <FontAwesomeIcon icon="exclamation-triangle" className="mr-2" />
-              Failed to load student data
-            </div>
-          ) : (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>ID</TableHead>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Order Type</TableHead>
-                    <TableHead>Order #</TableHead>
-                    <TableHead>Balance</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Options</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredStudents.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={8} className="text-center">
-                        No students found
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredStudents.map((student: Student) => (
-                      <TableRow key={student.id}>
-                        <TableCell className="font-medium">{student.studentId}</TableCell>
-                        <TableCell>{student.lastName}, {student.firstName}</TableCell>
-                        <TableCell>{student.orderType}</TableCell>
-                        <TableCell>{student.orderNumber}</TableCell>
-                        <TableCell>${student.balanceDue}</TableCell>
-                        <TableCell>
-                          <span 
-                            className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              student.paymentStatus === 'Paid' ? 'bg-green-100 text-green-800' :
-                              student.paymentStatus === 'Partial' ? 'bg-yellow-100 text-yellow-800' :
-                              'bg-red-100 text-red-800'
-                            }`}
-                          >
-                            {student.paymentStatus}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-wrap gap-1">
-                            {student.yearbook && (
-                              <span className="px-1 py-0.5 bg-blue-100 text-blue-800 text-xs rounded">
-                                YB
-                              </span>
-                            )}
-                            {student.personalization && (
-                              <span className="px-1 py-0.5 bg-purple-100 text-purple-800 text-xs rounded">
-                                PER
-                              </span>
-                            )}
-                            {student.signaturePackage && (
-                              <span className="px-1 py-0.5 bg-teal-100 text-teal-800 text-xs rounded">
-                                SIG
-                              </span>
-                            )}
-                            {student.clearCover && (
-                              <span className="px-1 py-0.5 bg-indigo-100 text-indigo-800 text-xs rounded">
-                                CC
-                              </span>
-                            )}
-                            {student.photoPockets && (
-                              <span className="px-1 py-0.5 bg-pink-100 text-pink-800 text-xs rounded">
-                                PP
-                              </span>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex space-x-2">
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              onClick={() => setEditingStudent(student)}
-                            >
-                              <FontAwesomeIcon icon="edit" />
-                            </Button>
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              className="text-red-500 hover:text-red-700"
-                              onClick={() => {
-                                if (window.confirm("Are you sure you want to delete this student?")) {
-                                  deleteStudentMutation.mutate(student.id);
-                                }
-                              }}
-                            >
-                              <FontAwesomeIcon icon="trash" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-      
-      {/* Edit Student Dialog */}
-      <Dialog 
-        open={editingStudent !== null} 
-        onOpenChange={(open) => !open && setEditingStudent(null)}
-      >
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Edit Student</DialogTitle>
-            <DialogDescription>
-              Update student information in the database.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
-            <div className="space-y-6">
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="studentId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Student ID</FormLabel>
-                        <FormControl>
-                          <Input {...field} readOnly={!!editingStudent} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="firstName"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>First Name</FormLabel>
-                          <FormControl>
-                            <Input {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="lastName"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Last Name</FormLabel>
-                          <FormControl>
-                            <Input {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="orderType"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Order Type</FormLabel>
-                          <FormControl>
-                            <Input {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="orderNumber"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Order Number</FormLabel>
-                          <FormControl>
-                            <Input {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="balanceDue"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Balance Due</FormLabel>
-                          <FormControl>
-                            <Input {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="paymentStatus"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Payment Status</FormLabel>
-                          <FormControl>
-                            <Input {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  
-                  <FormField
-                    control={form.control}
-                    name="photoUrl"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Photo URL</FormLabel>
-                        <FormControl>
-                          <Input {...field} value={field.value || ""} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="yearbook"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                          <FormControl>
-                            <Checkbox
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                            />
-                          </FormControl>
-                          <div className="space-y-1 leading-none">
-                            <FormLabel>Yearbook</FormLabel>
-                          </div>
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="personalization"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                          <FormControl>
-                            <Checkbox
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                            />
-                          </FormControl>
-                          <div className="space-y-1 leading-none">
-                            <FormLabel>Personalization</FormLabel>
-                          </div>
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="signaturePackage"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                          <FormControl>
-                            <Checkbox
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                            />
-                          </FormControl>
-                          <div className="space-y-1 leading-none">
-                            <FormLabel>Signature Package</FormLabel>
-                          </div>
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="clearCover"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                          <FormControl>
-                            <Checkbox
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                            />
-                          </FormControl>
-                          <div className="space-y-1 leading-none">
-                            <FormLabel>Clear Cover</FormLabel>
-                          </div>
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="photoPockets"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                          <FormControl>
-                            <Checkbox
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                            />
-                          </FormControl>
-                          <div className="space-y-1 leading-none">
-                            <FormLabel>Photo Pockets</FormLabel>
-                          </div>
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  
-                  <DialogFooter>
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      onClick={() => setEditingStudent(null)}
-                    >
-                      Cancel
-                    </Button>
-                    <Button 
-                      type="submit"
-                      disabled={editStudentMutation.isPending}
-                    >
-                      {editStudentMutation.isPending && (
-                        <FontAwesomeIcon icon="spinner" spin className="mr-2" />
-                      )}
-                      Save Changes
-                    </Button>
-                  </DialogFooter>
-                </form>
-              </Form>
+    <div className="space-y-4">
+      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+        <h3 className="text-lg text-neutral-800">Data Management</h3>
+        
+        <div className="flex flex-wrap gap-2">
+          <Button 
+            variant="outline"
+            onClick={() => document.getElementById('csvFileInput')?.click()}
+          >
+            <FontAwesomeIcon icon="file-import" className="mr-2" />
+            Import CSV
+          </Button>
+          <input
+            type="file"
+            accept=".csv"
+            id="csvFileInput"
+            className="hidden"
+            onChange={handleCsvFileUpload}
+          />
+        </div>
+      </div>
+
+      <Card className="border border-neutral-200">
+        <CardContent className="p-4">
+          <div className="space-y-4">
+            <div className="flex items-center space-x-2 text-neutral-700">
+              <FontAwesomeIcon icon="database" />
+              <h3 className="text-md">Data Import Options</h3>
             </div>
             
-            <div className="flex flex-col items-center justify-start">
-              <div className="border rounded-md p-2 w-full">
-                <h3 className="font-medium mb-2">Student Photo</h3>
-                {editingStudent && (
-                  <div className="flex flex-col items-center">
-                    {!imgError[editingStudent.id] ? (
-                      <img
-                        src={editingStudent.photoUrl || `https://cdn.gunter.cloud/faces/${editingStudent.lastName}_${editingStudent.firstName}.jpg`}
-                        alt={`${editingStudent.firstName} ${editingStudent.lastName}`}
-                        className="w-48 h-48 object-cover rounded-md"
-                        onError={() => setImgError({...imgError, [editingStudent.id]: true})}
-                      />
-                    ) : (
-                      <div className="w-48 h-48 bg-gray-100 rounded-md flex items-center justify-center">
-                        <p className="text-gray-500 text-center">No image available</p>
-                      </div>
-                    )}
-                  </div>
-                )}
+            <p className="text-sm text-neutral-600">
+              Import student data from CSV files. The system will attempt to automatically detect and map fields from your data.
+            </p>
+            
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="bg-neutral-50 p-4 rounded-md">
+                <h4 className="font-medium text-sm mb-1">Student Records</h4>
+                <p className="text-xs text-neutral-600 mb-2">
+                  Import student data including IDs, names, and yearbook options.
+                </p>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => document.getElementById('csvFileInput')?.click()}
+                >
+                  <FontAwesomeIcon icon="file-import" className="mr-2" />
+                  Import Students
+                </Button>
+              </div>
+              
+              <div className="bg-neutral-50 p-4 rounded-md">
+                <h4 className="font-medium text-sm mb-1">Field Detection</h4>
+                <p className="text-xs text-neutral-600 mb-2">
+                  The importer will attempt to auto-detect fields based on column headers.
+                </p>
+                <div className="text-xs text-neutral-600">
+                  <p>• Student ID, Name, Order fields are required</p>
+                  <p>• Format: CSV with headers in first row</p>
+                </div>
               </div>
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
-      
-      {/* Add Student Dialog */}
-      <Dialog 
-        open={isAddDialogOpen} 
-        onOpenChange={setIsAddDialogOpen}
-      >
-        <DialogContent className="max-w-2xl overflow-y-auto max-h-[90vh]">
+        </CardContent>
+      </Card>
+
+      {/* CSV Import Dialog */}
+      <Dialog open={showCsvDialog} onOpenChange={setShowCsvDialog}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Add New Student</DialogTitle>
-            <DialogDescription>
-              Enter student information to add to the database.
-            </DialogDescription>
+            <DialogTitle>Import Students from CSV</DialogTitle>
           </DialogHeader>
           
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="studentId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Student ID</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="firstName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>First Name</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="lastName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Last Name</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+          <div className="space-y-4 py-2">
+            {/* CSV Preview */}
+            {previewData.length > 0 && (
+              <div>
+                <h4 className="text-sm font-medium mb-2">Data Preview (First 3 rows)</h4>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        {csvHeaders.map(header => (
+                          <TableHead key={header} className="whitespace-nowrap text-xs">
+                            {header}
+                          </TableHead>
+                        ))}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {previewData.map((row, rowIndex) => (
+                        <TableRow key={rowIndex}>
+                          {csvHeaders.map(header => (
+                            <TableCell key={`${rowIndex}-${header}`} className="text-xs p-2">
+                              {row[header]?.toString().substring(0, 20)}
+                              {row[header]?.toString().length > 20 ? '...' : ''}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
+            )}
+            
+            {/* Field Mapping */}
+            <div>
+              <h4 className="text-sm font-medium mb-2">Map CSV Columns to Database Fields</h4>
+              <p className="text-xs text-neutral-500 mb-4">
+                Required fields are marked with * and must be mapped before import.
+                The system has attempted to automatically detect the correct mappings.
+              </p>
               
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="orderType"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Order Type</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              <div className="space-y-4">
+                <div>
+                  <h5 className="text-xs font-medium mb-2">Required Fields</h5>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {requiredFields.map(field => (
+                      <div key={field.key} className="flex flex-col space-y-1">
+                        <label className="text-xs">{field.label}</label>
+                        <select 
+                          className="text-xs p-1 border rounded"
+                          value={csvMappings[field.key] || ""}
+                          onChange={(e) => handleMappingSelect(field.key, e.target.value)}
+                        >
+                          <option value="">Select header...</option>
+                          {csvHeaders.map(header => (
+                            <option key={header} value={header}>
+                              {header}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    ))}
+                  </div>
+                </div>
                 
-                <FormField
-                  control={form.control}
-                  name="orderNumber"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Order Number</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div>
+                  <h5 className="text-xs font-medium mb-2">Optional Fields</h5>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {optionalFields.map(field => (
+                      <div key={field.key} className="flex flex-col space-y-1">
+                        <label className="text-xs">{field.label}</label>
+                        <select 
+                          className="text-xs p-1 border rounded"
+                          value={csvMappings[field.key] || ""}
+                          onChange={(e) => handleMappingSelect(field.key, e.target.value)}
+                        >
+                          <option value="">Select header...</option>
+                          {csvHeaders.map(header => (
+                            <option key={header} value={header}>
+                              {header}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="balanceDue"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Balance Due</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="paymentStatus"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Payment Status</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              
-              <FormField
-                control={form.control}
-                name="photoUrl"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Photo URL (optional)</FormLabel>
-                    <FormControl>
-                      <Input {...field} value={field.value || ""} placeholder="Leave blank to use default from cdn.gunter.cloud" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <FormField
-                  control={form.control}
-                  name="yearbook"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel>Yearbook</FormLabel>
-                      </div>
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="personalization"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel>Personalization</FormLabel>
-                      </div>
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="signaturePackage"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel>Signature Package</FormLabel>
-                      </div>
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="clearCover"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel>Clear Cover</FormLabel>
-                      </div>
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="photoPockets"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel>Photo Pockets</FormLabel>
-                      </div>
-                    </FormItem>
-                  )}
-                />
-              </div>
-              
-              <DialogFooter>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => setIsAddDialogOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  type="submit"
-                  disabled={addStudentMutation.isPending}
-                >
-                  {addStudentMutation.isPending && (
-                    <FontAwesomeIcon icon="spinner" spin className="mr-2" />
-                  )}
-                  Add Student
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowCsvDialog(false);
+                setCsvContent("");
+                setCsvMappings({});
+                setCsvHeaders([]);
+                setPreviewData([]);
+              }}
+              className="mr-2"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={processCsvImport}
+              disabled={csvMutation.isPending}
+            >
+              {csvMutation.isPending ? (
+                <>
+                  <FontAwesomeIcon icon="spinner" className="animate-spin mr-2" />
+                  Importing...
+                </>
+              ) : (
+                'Import Students'
+              )}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
