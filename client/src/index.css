@@ -2,7 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
 :root {
+  font-family: 'Inter', sans-serif;
   --background: 0 0% 100%;
   --foreground: 20 14.3% 4.1%;
   --muted: 60 4.8% 95.9%;
@@ -99,4 +102,22 @@ table thead th {
   top: 0;
   background-color: hsl(var(--background));
   z-index: 10;
+}
+
+/* Global Responsive Utilities */
+@media (max-width: 640px) {
+  .responsive-container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  
+  h1, h2, h3 {
+    text-align: center;
+  }
+}
+
+@media (max-width: 768px) {
+  .responsive-grid {
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+  }
 }
