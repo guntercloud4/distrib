@@ -12,15 +12,23 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-export const pool = new Pool({ 
+export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false // Required for some cloud PostgreSQL providers
-  },
-  connectionTimeoutMillis: 5000, // Lower timeout to fail faster
-  max: 20 // Maximum number of clients in the pool
+  ssl: true,
+  max: 10,
+  connectionTimeoutMillis: 0,
+  idleTimeoutMillis: 0
 });
-export const db = drizzle({ client: pool, schema });
+
+pool.on('error', (err) => {
+  console.error('Unexpected error on idle client', err);
+});
+
+pool.on('connect', () => {
+  log('Connected to database', 'database');
+});
+
+export const db = drizzle(pool, { schema });
 
 // Add error handler for the pool
 pool.on('error', (err) => {
