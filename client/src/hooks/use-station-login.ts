@@ -65,9 +65,13 @@ export function useStationLogin() {
 
   // Function to log out
   const handleLogout = () => {
+    // Clear state
+    setOperatorName("");
     setSelectedStation(null);
     setIsLoggedIn(false);
     setShowLoginForm(false);
+    
+    // Clear local storage
     localStorage.removeItem("currentOperator");
     localStorage.removeItem("selectedStation");
     

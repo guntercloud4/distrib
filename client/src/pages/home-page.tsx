@@ -1,6 +1,3 @@
-import { DistributionStation } from "@/components/distribution-station";
-import { CheckerStation } from "@/components/checker-station";
-import { CashStation } from "@/components/cash-station";
 import { RubyStation } from "@/components/ruby-station";
 import { StationSelection } from "@/components/station-selection";
 import { StationLogin } from "@/components/station-login";
@@ -41,27 +38,23 @@ export default function HomePage() {
               onBack={() => selectStation(null)}
             />
           )
-        ) : selectedStation === "distribution" ? (
-          <DistributionStation 
-            operatorName={operatorName} 
-            onLogout={handleLogout} 
-          />
-        ) : selectedStation === "checker" ? (
-          <CheckerStation 
-            operatorName={operatorName} 
-            onLogout={handleLogout} 
-          />
-        ) : selectedStation === "cash" ? (
-          <CashStation 
-            operatorName={operatorName} 
-            onLogout={handleLogout} 
-          />
         ) : selectedStation === "ruby" ? (
           <RubyStation
             operatorName={operatorName}
             onLogout={handleLogout}
           />
-        ) : null}
+        ) : (
+          <div className="container mx-auto my-10 p-6 text-center">
+            <h2 className="text-xl font-semibold text-red-500 mb-4">This station is temporarily unavailable</h2>
+            <p className="mb-6">We're currently working on improving this section.</p>
+            <button 
+              onClick={handleLogout}
+              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
+            >
+              Return to Station Selection
+            </button>
+          </div>
+        )}
       </main>
       
       <Footer />
