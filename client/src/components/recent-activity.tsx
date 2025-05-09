@@ -2,9 +2,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { ActionLog, Distribution, Payment } from "@shared/schema";
 import { formatTime } from "@/lib/utils";
+import { useState, useEffect } from "react";
 
 interface RecentActivityProps {
   stationType: "distribution" | "checker" | "cash" | "ruby";
+  searchTerm?: string;
 }
 
 export function RecentActivity({ stationType }: RecentActivityProps) {
