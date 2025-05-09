@@ -1,8 +1,11 @@
 import { Pool, neonConfig } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-serverless';
+import { migrate } from 'drizzle-orm/neon-serverless/migrator';
 import ws from "ws";
 import * as schema from "@shared/schema";
 import { log } from "./vite";
+import { eq } from 'drizzle-orm';
+import { actionLogs } from '@shared/schema';
 
 neonConfig.webSocketConstructor = ws;
 
@@ -30,12 +33,6 @@ pool.on('connect', () => {
 
 export const db = drizzle(pool, { schema });
 
-// Add error handler for the pool
-pool.on('error', (err) => {
-  console.error('Unexpected error on idle client', err);
-});
-
-// Initialize database tables if they don't exist
 // Helper function to sleep
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -48,96 +45,107 @@ export async function initializeDatabase() {
       if (testResult.rows.length > 0) {
         log('Database connection successful', 'database');
       }
-    
-    // Create tables if they don't exist
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS students (
-        id SERIAL PRIMARY KEY,
-        student_id TEXT NOT NULL UNIQUE,
-        last_name TEXT NOT NULL,
-        first_name TEXT NOT NULL,
-        order_entered_date TIMESTAMP DEFAULT NOW(),
-        order_type TEXT,
-        order_number TEXT,
-        balance_due NUMERIC DEFAULT 0,
-        payment_status TEXT DEFAULT 'Unpaid',
-        yearbook BOOLEAN DEFAULT FALSE,
-        personalization BOOLEAN DEFAULT FALSE,
-        signature_package BOOLEAN DEFAULT FALSE, 
-        clear_cover BOOLEAN DEFAULT FALSE,
-        photo_pockets BOOLEAN DEFAULT FALSE,
-        photo_url TEXT
-      );
-    `);
-    
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS action_logs (
-        id SERIAL PRIMARY KEY,
-        timestamp TIMESTAMP DEFAULT NOW(),
-        action TEXT NOT NULL,
-        student_id TEXT,
-        details JSONB,
-        station_name TEXT NOT NULL,
-        operator_name TEXT NOT NULL
-      );
-    `);
-    
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS distributions (
-        id SERIAL PRIMARY KEY,
-        timestamp TIMESTAMP DEFAULT NOW(),
-        student_id TEXT NOT NULL,
-        operator_name TEXT NOT NULL,
-        verified BOOLEAN DEFAULT FALSE,
-        verified_by TEXT,
-        verified_at TIMESTAMP
-      );
-    `);
-    
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS payments (
-        id SERIAL PRIMARY KEY,
-        timestamp TIMESTAMP DEFAULT NOW(),
-        student_id TEXT NOT NULL,
-        amount_paid NUMERIC NOT NULL,
-        operator_name TEXT NOT NULL,
-        bills JSONB NOT NULL,
-        change_due NUMERIC NOT NULL,
-        change_bills JSONB NOT NULL
-      );
-    `);
-    
-    // Check if students table is empty - this suggests it's a new database
-    const studentCount = await pool.query('SELECT COUNT(*) FROM students');
-    const isNewDb = parseInt(studentCount.rows[0].count) === 0;
-    
-    // Add system log only if it seems to be a new setup
-    if (isNewDb) {
-      log('Database initialized successfully', 'database');
-      
+
+      // Push schema to database using drizzle-kit push
       try {
-        await pool.query(`
-          INSERT INTO action_logs (action, operator_name, station_name, details) 
-          VALUES ('SYSTEM', 'System', 'System', '{"message": "Database initialized successfully"}')
-        `);
-        return true;
-      } catch (logError) {
-        log(`Failed to add initialization log: ${logError}`, 'database');
-        // Continue even if log entry fails
+        const { meta: { tables } } = await db.select().from(schema.students).limit(1).catch(() => ({ meta: { tables: null } }));
+        
+        // If tables don't exist yet, create them
+        if (!tables) {
+          log('Creating database tables using drizzle schema...', 'database');
+          // Use npm run db:push command in production
+          await pool.query(`
+            CREATE TABLE IF NOT EXISTS students (
+              id SERIAL PRIMARY KEY,
+              student_id TEXT NOT NULL UNIQUE,
+              last_name TEXT NOT NULL,
+              first_name TEXT NOT NULL,
+              order_entered_date TIMESTAMP DEFAULT NOW(),
+              order_type TEXT NOT NULL,
+              order_number TEXT NOT NULL,
+              balance_due NUMERIC(10, 2) NOT NULL,
+              payment_status TEXT NOT NULL,
+              yearbook BOOLEAN NOT NULL DEFAULT FALSE,
+              personalization BOOLEAN NOT NULL DEFAULT FALSE,
+              signature_package BOOLEAN NOT NULL DEFAULT FALSE, 
+              clear_cover BOOLEAN NOT NULL DEFAULT FALSE,
+              photo_pockets BOOLEAN NOT NULL DEFAULT FALSE,
+              photo_url TEXT
+            );
+            
+            CREATE TABLE IF NOT EXISTS action_logs (
+              id SERIAL PRIMARY KEY,
+              timestamp TIMESTAMP DEFAULT NOW(),
+              action TEXT NOT NULL,
+              student_id TEXT,
+              details JSONB,
+              station_name TEXT NOT NULL,
+              operator_name TEXT NOT NULL
+            );
+            
+            CREATE TABLE IF NOT EXISTS distributions (
+              id SERIAL PRIMARY KEY,
+              timestamp TIMESTAMP DEFAULT NOW(),
+              student_id TEXT NOT NULL,
+              operator_name TEXT NOT NULL,
+              verified BOOLEAN NOT NULL DEFAULT FALSE,
+              verified_by TEXT,
+              verified_at TIMESTAMP
+            );
+            
+            CREATE TABLE IF NOT EXISTS payments (
+              id SERIAL PRIMARY KEY,
+              timestamp TIMESTAMP DEFAULT NOW(),
+              student_id TEXT NOT NULL,
+              amount_paid NUMERIC NOT NULL,
+              operator_name TEXT NOT NULL,
+              bills JSONB NOT NULL,
+              change_due NUMERIC NOT NULL,
+              change_bills JSONB NOT NULL
+            );
+          `);
+        }
+      } catch (schemaError) {
+        log(`Schema push error: ${schemaError}`, 'database');
+        // Continue anyway - tables may exist already
+      }
+      
+      // Check if students table is empty - this suggests it's a new database
+      try {
+        const studentCount = await db.select().from(schema.students).count();
+        const isNewDb = parseInt(studentCount[0]?.count || '0') === 0;
+        
+        // Add system log only if it's a new setup
+        if (isNewDb) {
+          log('Database initialized successfully', 'database');
+          
+          try {
+            await db.insert(schema.actionLogs).values({
+              action: 'SYSTEM',
+              stationName: 'System',
+              operatorName: 'System',
+              details: { message: 'Database initialized successfully' }
+            });
+            return true;
+          } catch (logError) {
+            log(`Failed to add initialization log: ${logError}`, 'database');
+            // Continue even if log entry fails
+          }
+        }
+        
+        return true;  // Database is initialized and ready
+      } catch (error) {
+        log(`Database check error: ${error}`, 'database');
+        return false;
+      }
+    } catch (error) {
+      log(`Database initialization error: ${error}`, 'database');
+      retries--;
+      if (retries > 0) {
+        log(`Database connection failed, retrying in 5 seconds... (${retries} attempts remaining)`, 'database');
+        await sleep(5000);
       }
     }
-    
-    return isNewDb;
-  } catch (error) {
-    log(`Database initialization error: ${error}`, 'database');
-    // Don't rethrow - allow the application to continue
-    return false;
   }
-  retries--;
-  if (retries > 0) {
-    log(`Database connection failed, retrying in 5 seconds... (${retries} attempts remaining)`, 'database');
-    await sleep(5000);
-  }
-}
-return false;
+  return false;
 }
