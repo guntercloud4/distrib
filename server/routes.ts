@@ -90,8 +90,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create a new student
   app.post("/api/students", async (req: Request, res: Response) => {
     try {
-      const studentData = insertStudentSchema.parse(req.body);
-      const student = await storage.createStudent(studentData);
+      // Keep balance as string since that's what the schema expects
+      const studentData = {
+        ...req.body
+      };
+      
+      const validatedData = insertStudentSchema.parse(studentData);
+      const student = await storage.createStudent(validatedData);
       
       // Log the action
       await storage.createLog({
@@ -99,15 +104,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         action: "CREATE_STUDENT",
         details: { student },
         stationName: "Ruby Station",
-        operatorName: req.body.operatorName,
+        operatorName: req.body.operatorName || "System",
       });
       
       res.status(201).json(student);
     } catch (error) {
       if (error instanceof z.ZodError) {
+        console.error("Validation error:", error.errors);
         return res.status(400).json({ error: "Invalid student data", details: error.errors });
       }
-      res.status(500).json({ error: "Failed to create student" });
+      console.error("Error creating student:", error);
+      res.status(500).json({ error: "Failed to create student", message: error instanceof Error ? error.message : String(error) });
     }
   });
 
