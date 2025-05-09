@@ -44,7 +44,7 @@ export default function HomePage() {
             onLogout={handleLogout}
           />
         ) : (
-          <div className="container mx-auto my-10 p-6 text-center">
+          <div className="container mx-auto my-10 p-4 sm:p-6 text-center responsive-container">
             <h2 className="text-xl font-semibold text-red-500 mb-4">This station is temporarily unavailable</h2>
             <p className="mb-6">We're currently working on improving this section.</p>
             <button 

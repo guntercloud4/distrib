@@ -17,10 +17,10 @@ export function RubyStationLogin({ onLogin, onBack, showError }: RubyStationLogi
   };
 
   return (
-    <div className="max-w-md mx-auto px-4 sm:px-6 py-12 fade-in">
-      <div className="bg-white shadow rounded-lg p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-semibold text-neutral-800">Ruby Station Login</h2>
+    <div className="max-w-md mx-auto px-4 sm:px-6 py-8 sm:py-12 fade-in responsive-container">
+      <div className="bg-white shadow rounded-lg p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row justify-between items-center mb-6">
+          <h2 className="text-xl font-semibold text-neutral-800 mb-2 sm:mb-0">Ruby Station Login</h2>
           <button onClick={onBack} className="text-neutral-500 hover:text-neutral-700">
             <span className="material-icons">close</span>
           </button>
