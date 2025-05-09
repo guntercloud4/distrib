@@ -12,8 +12,20 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+export const pool = new Pool({ 
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false // Required for some cloud PostgreSQL providers
+  },
+  connectionTimeoutMillis: 5000, // Lower timeout to fail faster
+  max: 20 // Maximum number of clients in the pool
+});
 export const db = drizzle({ client: pool, schema });
+
+// Add error handler for the pool
+pool.on('error', (err) => {
+  console.error('Unexpected error on idle client', err);
+});
 
 // Initialize database tables if they don't exist
 // Helper function to sleep
