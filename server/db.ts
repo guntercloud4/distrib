@@ -92,8 +92,8 @@ export async function initializeDatabase() {
       
       try {
         await pool.query(`
-          INSERT INTO action_logs (action, operator_name, details) 
-          VALUES ('SYSTEM', 'System', '{"message": "Database initialized successfully"}')
+          INSERT INTO action_logs (action, operator_name, station_name, details) 
+          VALUES ('SYSTEM', 'System', 'System', '{"message": "Database initialized successfully"}')
         `);
         return true;
       } catch (logError) {
