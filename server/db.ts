@@ -28,16 +28,20 @@ export async function initializeDatabase() {
     await pool.query(`
       CREATE TABLE IF NOT EXISTS students (
         id SERIAL PRIMARY KEY,
-        student_id TEXT NOT NULL,
-        name TEXT NOT NULL,
-        grade TEXT,
+        student_id TEXT NOT NULL UNIQUE,
+        last_name TEXT NOT NULL,
+        first_name TEXT NOT NULL,
+        order_entered_date TIMESTAMP DEFAULT NOW(),
+        order_type TEXT,
+        order_number TEXT,
+        balance_due NUMERIC DEFAULT 0,
+        payment_status TEXT DEFAULT 'Unpaid',
         yearbook BOOLEAN DEFAULT FALSE,
         personalization BOOLEAN DEFAULT FALSE,
         signature_package BOOLEAN DEFAULT FALSE, 
         clear_cover BOOLEAN DEFAULT FALSE,
         photo_pockets BOOLEAN DEFAULT FALSE,
-        balance_due NUMERIC DEFAULT 0,
-        payment_status TEXT DEFAULT 'Unpaid'
+        photo_url TEXT
       );
     `);
     
@@ -47,8 +51,9 @@ export async function initializeDatabase() {
         timestamp TIMESTAMP DEFAULT NOW(),
         action TEXT NOT NULL,
         student_id TEXT,
-        operator_name TEXT NOT NULL,
-        details JSONB
+        details JSONB,
+        station_name TEXT NOT NULL,
+        operator_name TEXT NOT NULL
       );
     `);
     
