@@ -16,24 +16,32 @@ export function DatabaseTab() {
 
   // Fetch database status using React Query
   type DatabaseStatus = { status: string; message: string; serverTime: string; tablesInitialized: boolean };
-  
+
   const { isLoading: dbStatusLoading } = useQuery<DatabaseStatus>({
     queryKey: ['/api/database/status'],
     refetchInterval: 30000, // Refresh every 30 seconds
   });
-  
+
   // Handle database status changes separately
   useEffect(() => {
     // Check if we can ping the database
     const checkDatabase = async () => {
       try {
-        const response = await fetch('/api/database/status');
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 10000);
+
+        const response = await fetch('/api/database/status', {
+          signal: controller.signal
+        });
+
+        clearTimeout(timeout);
+
         if (!response.ok) {
           setDatabaseStatus("error");
           setStatusMessage("Database connection failed.");
           return;
         }
-        
+
         const data = await response.json();
         if (data.status === "ok") {
           setDatabaseStatus("online");
@@ -47,11 +55,11 @@ export function DatabaseTab() {
         setStatusMessage("Failed to connect to database. Please check your connection settings.");
       }
     };
-    
+
     checkDatabase();
     // Set up interval to check periodically
     const interval = setInterval(checkDatabase, 30000);
-    
+
     // Clean up on unmount
     return () => clearInterval(interval);
   }, []);
@@ -87,12 +95,12 @@ export function DatabaseTab() {
   // Export data as CSV
   const exportData = (type: 'students' | 'logs' | 'distributions' | 'payments') => {
     setExportLoading(true);
-    
+
     try {
       let data: any[] = [];
       let headers: string[] = [];
       let filename = '';
-      
+
       switch (type) {
         case 'students':
           if (!students || students.length === 0) {
@@ -104,13 +112,13 @@ export function DatabaseTab() {
             setExportLoading(false);
             return;
           }
-          
+
           data = students;
           headers = ['ID', 'Student ID', 'Name', 'Grade', 'Balance Due', 'Payment Status', 
                     'Yearbook', 'Personalization', 'Signature Package', 'Clear Cover', 'Photo Pockets'];
           filename = 'students';
           break;
-          
+
         case 'logs':
           if (!logs || logs.length === 0) {
             toast({
@@ -121,12 +129,12 @@ export function DatabaseTab() {
             setExportLoading(false);
             return;
           }
-          
+
           data = logs;
           headers = ['ID', 'Timestamp', 'Action', 'Student ID', 'Operator', 'Details'];
           filename = 'logs';
           break;
-          
+
         case 'distributions':
           if (!distributions || distributions.length === 0) {
             toast({
@@ -137,12 +145,12 @@ export function DatabaseTab() {
             setExportLoading(false);
             return;
           }
-          
+
           data = distributions;
           headers = ['ID', 'Timestamp', 'Student ID', 'Operator', 'Verified', 'Verified By', 'Verified At'];
           filename = 'distributions';
           break;
-          
+
         case 'payments':
           if (!payments || payments.length === 0) {
             toast({
@@ -153,20 +161,20 @@ export function DatabaseTab() {
             setExportLoading(false);
             return;
           }
-          
+
           data = payments;
           headers = ['ID', 'Timestamp', 'Student ID', 'Amount Paid', 'Operator', 'Change Due'];
           filename = 'payments';
           break;
       }
-      
+
       // Generate CSV content
       const csvRows = [];
       csvRows.push(headers.join(','));
-      
+
       for (const row of data) {
         const values = [];
-        
+
         // Format based on type
         switch (type) {
           case 'students':
@@ -184,7 +192,7 @@ export function DatabaseTab() {
               row.photoPockets ? 'Yes' : 'No'
             );
             break;
-            
+
           case 'logs':
             values.push(
               row.id,
@@ -195,7 +203,7 @@ export function DatabaseTab() {
               `"${typeof row.details === 'object' ? JSON.stringify(row.details).replace(/"/g, '""') : (row.details || '')}"`,
             );
             break;
-            
+
           case 'distributions':
             values.push(
               row.id,
@@ -207,7 +215,7 @@ export function DatabaseTab() {
               row.verifiedAt ? new Date(row.verifiedAt).toISOString() : ''
             );
             break;
-            
+
           case 'payments':
             values.push(
               row.id,
@@ -219,12 +227,12 @@ export function DatabaseTab() {
             );
             break;
         }
-        
+
         csvRows.push(values.join(','));
       }
-      
+
       const csvString = csvRows.join('\n');
-      
+
       // Create download link
       const blob = new Blob([csvString], { type: 'text/csv' });
       const url = URL.createObjectURL(blob);
@@ -233,13 +241,13 @@ export function DatabaseTab() {
       a.download = `${filename}_${new Date().toISOString().slice(0,10)}.csv`;
       document.body.appendChild(a);
       a.click();
-      
+
       // Clean up
       setTimeout(() => {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
       }, 100);
-      
+
       toast({
         title: "Export Successful",
         description: `${type.charAt(0).toUpperCase() + type.slice(1)} data exported successfully.`,
@@ -260,7 +268,7 @@ export function DatabaseTab() {
       <Card className="mb-6">
         <CardContent className="p-6">
           <h3 className="text-lg font-medium text-neutral-800 mb-2">Database Status</h3>
-          
+
           <div className="flex items-center gap-2 mb-4">
             <div 
               className={`w-3 h-3 rounded-full ${
@@ -272,14 +280,14 @@ export function DatabaseTab() {
               {databaseStatus === "online" ? "Online" : 
               databaseStatus === "error" ? "Error" : "Checking..."}
             </span>
-            
+
             {dbStatusLoading && (
               <FontAwesomeIcon icon="spinner" className="animate-spin ml-2 text-sm text-neutral-400" />
             )}
           </div>
-          
+
           <p className="text-sm text-neutral-600 mb-4">{statusMessage}</p>
-          
+
           {databaseStatus === "online" && (
             <div className="bg-neutral-50 p-3 rounded-md mb-3 text-xs">
               <div className="flex flex-col gap-2">
@@ -298,7 +306,7 @@ export function DatabaseTab() {
               </div>
             </div>
           )}
-          
+
           {databaseStatus === "error" && (
             <Button 
               variant="outline" 
@@ -312,15 +320,15 @@ export function DatabaseTab() {
           )}
         </CardContent>
       </Card>
-      
+
       <Card>
         <CardContent className="p-6">
           <h3 className="text-lg font-medium text-neutral-800 mb-4">Database Export</h3>
-          
+
           <p className="text-sm text-neutral-600 mb-4">
             Export data from the database as CSV files for backup or analysis.
           </p>
-          
+
           <Tabs defaultValue="students">
             <TabsList className="mb-4">
               <TabsTrigger value="students">Students</TabsTrigger>
@@ -328,7 +336,7 @@ export function DatabaseTab() {
               <TabsTrigger value="distributions">Distributions</TabsTrigger>
               <TabsTrigger value="payments">Payments</TabsTrigger>
             </TabsList>
-            
+
             <TabsContent value="students">
               <div className="bg-neutral-50 p-4 rounded-md mb-4">
                 <h4 className="font-medium text-sm mb-1">Students Data</h4>
@@ -354,7 +362,7 @@ export function DatabaseTab() {
                   )}
                 </Button>
               </div>
-              
+
               {studentsLoading ? (
                 <div className="text-center py-4 text-sm text-neutral-500">
                   <FontAwesomeIcon icon="spinner" className="animate-spin mr-2" />
@@ -370,7 +378,7 @@ export function DatabaseTab() {
                 </p>
               )}
             </TabsContent>
-            
+
             <TabsContent value="logs">
               <div className="bg-neutral-50 p-4 rounded-md mb-4">
                 <h4 className="font-medium text-sm mb-1">System Logs</h4>
@@ -396,7 +404,7 @@ export function DatabaseTab() {
                   )}
                 </Button>
               </div>
-              
+
               {logsLoading ? (
                 <div className="text-center py-4 text-sm text-neutral-500">
                   <FontAwesomeIcon icon="spinner" className="animate-spin mr-2" />
@@ -412,7 +420,7 @@ export function DatabaseTab() {
                 </p>
               )}
             </TabsContent>
-            
+
             <TabsContent value="distributions">
               <div className="bg-neutral-50 p-4 rounded-md mb-4">
                 <h4 className="font-medium text-sm mb-1">Distributions Data</h4>
@@ -438,7 +446,7 @@ export function DatabaseTab() {
                   )}
                 </Button>
               </div>
-              
+
               {distributionsLoading ? (
                 <div className="text-center py-4 text-sm text-neutral-500">
                   <FontAwesomeIcon icon="spinner" className="animate-spin mr-2" />
@@ -454,7 +462,7 @@ export function DatabaseTab() {
                 </p>
               )}
             </TabsContent>
-            
+
             <TabsContent value="payments">
               <div className="bg-neutral-50 p-4 rounded-md mb-4">
                 <h4 className="font-medium text-sm mb-1">Payments Data</h4>
@@ -480,7 +488,7 @@ export function DatabaseTab() {
                   )}
                 </Button>
               </div>
-              
+
               {paymentsLoading ? (
                 <div className="text-center py-4 text-sm text-neutral-500">
                   <FontAwesomeIcon icon="spinner" className="animate-spin mr-2" />

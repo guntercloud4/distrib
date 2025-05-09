@@ -16,13 +16,18 @@ export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 export const db = drizzle({ client: pool, schema });
 
 // Initialize database tables if they don't exist
+// Helper function to sleep
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 export async function initializeDatabase() {
-  try {
-    // Simple connection test
-    const testResult = await pool.query('SELECT NOW()');
-    if (testResult.rows.length > 0) {
-      log('Database connection successful', 'database');
-    }
+  let retries = 5;
+  while (retries > 0) {
+    try {
+      // Simple connection test
+      const testResult = await pool.query('SELECT NOW()');
+      if (testResult.rows.length > 0) {
+        log('Database connection successful', 'database');
+      }
     
     // Create tables if they don't exist
     await pool.query(`
@@ -108,4 +113,11 @@ export async function initializeDatabase() {
     // Don't rethrow - allow the application to continue
     return false;
   }
+  retries--;
+  if (retries > 0) {
+    log(`Database connection failed, retrying in 5 seconds... (${retries} attempts remaining)`, 'database');
+    await sleep(5000);
+  }
+}
+return false;
 }
