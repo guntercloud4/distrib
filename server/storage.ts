@@ -67,7 +67,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createStudent(student: InsertStudent): Promise<Student> {
-    const result = await db.insert(students).values(student).returning();
+    // Ensure boolean fields have proper default values
+    const studentData = {
+      ...student,
+      yearbook: student.yearbook === undefined ? false : student.yearbook,
+      personalization: student.personalization === undefined ? false : student.personalization,
+      signaturePackage: student.signaturePackage === undefined ? false : student.signaturePackage,
+      clearCover: student.clearCover === undefined ? false : student.clearCover,
+      photoPockets: student.photoPockets === undefined ? false : student.photoPockets,
+    };
+    
+    const result = await db.insert(students).values(studentData).returning();
     return result[0];
   }
 
@@ -169,14 +179,14 @@ export class DatabaseStorage implements IStorage {
         if (balance - paid <= 0) {
           await tx.update(students)
             .set({
-              balanceDue: 0,
+              balanceDue: "0",
               paymentStatus: "Paid"
             })
             .where(eq(students.id, student.id));
         } else {
           await tx.update(students)
             .set({
-              balanceDue: balance - paid
+              balanceDue: (balance - paid).toString()
             })
             .where(eq(students.id, student.id));
         }
@@ -207,10 +217,10 @@ export class DatabaseStorage implements IStorage {
     // Create payment record
     const payment: InsertPayment = {
       studentId: paymentData.studentId,
-      amountPaid: paymentData.amountDue,
+      amountPaid: paymentData.amountDue.toString(), // Convert to string for numeric DB field
       operatorName: paymentData.operatorName,
       bills: bills,
-      changeDue,
+      changeDue: changeDue.toString(), // Convert to string for numeric DB field
       changeBills
     };
     
@@ -261,12 +271,12 @@ export class DatabaseStorage implements IStorage {
   }
   
   // CSV operations
-  async importStudents(students: InsertStudent[]): Promise<Student[]> {
+  async importStudents(studentsToImport: InsertStudent[]): Promise<Student[]> {
     const imported: Student[] = [];
     
     // Use transaction for batch processing
     await db.transaction(async (tx) => {
-      for (const student of students) {
+      for (const student of studentsToImport) {
         // Check if student already exists
         const existingResult = await tx.select()
           .from(students)
@@ -274,10 +284,20 @@ export class DatabaseStorage implements IStorage {
         
         const existing = existingResult[0];
         
+        // Ensure boolean fields have proper default values
+        const studentData = {
+          ...student,
+          yearbook: student.yearbook === undefined ? false : student.yearbook,
+          personalization: student.personalization === undefined ? false : student.personalization,
+          signaturePackage: student.signaturePackage === undefined ? false : student.signaturePackage,
+          clearCover: student.clearCover === undefined ? false : student.clearCover,
+          photoPockets: student.photoPockets === undefined ? false : student.photoPockets,
+        };
+        
         if (existing) {
           // Update existing student
           const [updated] = await tx.update(students)
-            .set(student)
+            .set(studentData)
             .where(eq(students.id, existing.id))
             .returning();
           
@@ -285,7 +305,7 @@ export class DatabaseStorage implements IStorage {
         } else {
           // Create new student
           const [created] = await tx.insert(students)
-            .values(student)
+            .values(studentData)
             .returning();
           
           imported.push(created);

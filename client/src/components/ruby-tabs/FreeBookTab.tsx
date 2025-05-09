@@ -1,21 +1,13 @@
-import React, { useState, useRef, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
-import { Student } from "@shared/schema";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { socketProvider } from "@/lib/socket";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter
-} from "@/components/ui/dialog";
+import { Student } from "@shared/schema";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
 interface FreeBookTabProps {
   operatorName: string;
@@ -31,6 +23,7 @@ export function FreeBookTab({ operatorName }: FreeBookTabProps) {
   const firstNameInputRef = useRef<HTMLInputElement>(null);
   
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   
   // Focus the first name input when the component mounts
   useEffect(() => {
@@ -50,7 +43,9 @@ export function FreeBookTab({ operatorName }: FreeBookTabProps) {
         orderType: "FREE",
         orderNumber: `FREE-${Date.now().toString().slice(-6)}`,
         balanceDue: "0",
-        paymentStatus: "Free"
+        paymentStatus: "Free",
+        yearbook: true,
+        operatorName: data.operatorName
       });
       
       const student = await studentRes.json();
@@ -69,22 +64,21 @@ export function FreeBookTab({ operatorName }: FreeBookTabProps) {
       setProcessedStudent(data.student);
       setShowSuccessDialog(true);
       
-      // Log the action via WebSocket
-      socketProvider.send({
-        type: 'LOG_ACTION',
-        data: {
-          id: Date.now(),
-          timestamp: new Date(),
-          studentId: data.student.studentId,
-          action: 'ISSUE_FREE_BOOK',
-          details: { 
-            firstName: data.student.firstName,
-            lastName: data.student.lastName
-          },
-          stationName: 'Ruby Station',
-          operatorName
+      // Reset form
+      setFirstName("");
+      setLastName("");
+      
+      // Refetch any relevant queries
+      queryClient.invalidateQueries({ queryKey: ['/api/students'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/distributions'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/logs'] });
+      
+      // Refocus the first name input
+      setTimeout(() => {
+        if (firstNameInputRef.current) {
+          firstNameInputRef.current.focus();
         }
-      });
+      }, 100);
     },
     onError: (error: Error) => {
       toast({
@@ -96,10 +90,8 @@ export function FreeBookTab({ operatorName }: FreeBookTabProps) {
   });
   
   // Handle form submit
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!firstName || !lastName) {
+  const handleSubmit = () => {
+    if (!firstName.trim() || !lastName.trim()) {
       toast({
         title: "Missing Information",
         description: "Please enter both first and last name.",
@@ -115,109 +107,94 @@ export function FreeBookTab({ operatorName }: FreeBookTabProps) {
     });
   };
   
-  // Reset the form
-  const resetForm = () => {
-    setFirstName("");
-    setLastName("");
+  // Handle close success dialog
+  const handleCloseSuccessDialog = () => {
     setShowSuccessDialog(false);
     setProcessedStudent(null);
-    
-    // Focus the first name input
-    setTimeout(() => {
-      if (firstNameInputRef.current) {
-        firstNameInputRef.current.focus();
-      }
-    }, 100);
   };
-
+  
   return (
     <div>
-      <Card className="mb-6">
+      <Card>
         <CardContent className="p-6">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-medium text-neutral-800">Free Book Management</h3>
           </div>
           
-          <div className="bg-white border border-neutral-200 rounded-lg p-6 shadow-sm">
-            <div className="text-center mb-6">
-              <div className="h-16 w-16 rounded-full flex items-center justify-center bg-blue-100 text-blue-600 mx-auto mb-4">
-                <FontAwesomeIcon icon="gift" size="2x" />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-1">
+              <div className="bg-neutral-50 p-4 rounded-lg">
+                <h4 className="text-sm font-medium text-neutral-800 mb-4">Issue a Complimentary Book</h4>
+                <p className="text-sm text-neutral-600 mb-4">
+                  Issue a complimentary book to someone without requiring payment.
+                </p>
+                
+                <div className="space-y-4">
+                  <div>
+                    <label htmlFor="first-name" className="block text-sm font-medium text-neutral-700 mb-1">
+                      First Name
+                    </label>
+                    <Input
+                      id="first-name"
+                      ref={firstNameInputRef}
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      disabled={freeBookMutation.isPending}
+                    />
+                  </div>
+                  
+                  <div>
+                    <label htmlFor="last-name" className="block text-sm font-medium text-neutral-700 mb-1">
+                      Last Name
+                    </label>
+                    <Input
+                      id="last-name"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      disabled={freeBookMutation.isPending}
+                    />
+                  </div>
+                  
+                  <Button 
+                    onClick={handleSubmit}
+                    disabled={freeBookMutation.isPending || !firstName.trim() || !lastName.trim()}
+                    className="w-full"
+                  >
+                    {freeBookMutation.isPending ? (
+                      <>
+                        <FontAwesomeIcon icon="spinner" className="mr-2 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <FontAwesomeIcon icon="gift" className="mr-2" />
+                        Issue Free Book
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
-              <h4 className="text-xl font-medium mb-2">Free Book Management</h4>
-              <p className="text-neutral-600 mb-4">
-                Issue a complimentary book to someone without requiring payment.
-              </p>
             </div>
             
-            <form onSubmit={handleSubmit} className="max-w-md mx-auto">
-              <div className="space-y-4 mb-6">
-                <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-1">
-                    First Name <span className="text-red-500">*</span>
-                  </label>
-                  <Input
-                    ref={firstNameInputRef}
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    placeholder="Enter first name"
-                    className="w-full"
-                    autoFocus
-                  />
+            <div className="lg:col-span-2">
+              <div className="bg-neutral-50 p-6 rounded-lg flex flex-col items-center justify-center min-h-[300px]">
+                <div className="text-6xl text-neutral-300 mb-4">
+                  <FontAwesomeIcon icon="book-open" />
                 </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-1">
-                    Last Name <span className="text-red-500">*</span>
-                  </label>
-                  <Input
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    placeholder="Enter last name"
-                    className="w-full"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && firstName && lastName) {
-                        e.preventDefault();
-                        handleSubmit(e);
-                      }
-                    }}
-                  />
+                <div className="text-xl font-medium text-neutral-600 mb-2">Free Book System</div>
+                <div className="text-neutral-500 text-center max-w-md">
+                  Provide complimentary books to VIPs, administrators, staff, or other special recipients without requiring payment.
+                </div>
+                <div className="mt-6 text-sm text-neutral-500 border-t border-neutral-200 pt-4 w-full text-center">
+                  <ul className="text-left list-disc list-inside">
+                    <li>Student ID will be set to 0000000</li>
+                    <li>Order type will be set to FREE</li>
+                    <li>Sale number is auto-generated</li>
+                    <li>Payment status will be Free</li>
+                  </ul>
                 </div>
               </div>
-              
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                <div className="flex items-start">
-                  <div className="flex-shrink-0 mt-0.5">
-                    <FontAwesomeIcon icon="info-circle" className="text-blue-500" />
-                  </div>
-                  <div className="ml-3">
-                    <h5 className="text-sm font-medium text-blue-800">Free Book Information</h5>
-                    <ul className="mt-1 text-sm text-blue-700 list-disc list-inside">
-                      <li>Student ID will be set to 0000000</li>
-                      <li>A unique order number will be generated</li>
-                      <li>Payment status will be marked as "Free"</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-              
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={!firstName || !lastName || freeBookMutation.isPending}
-              >
-                {freeBookMutation.isPending ? (
-                  <>
-                    <FontAwesomeIcon icon="sync" className="mr-2 animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    <FontAwesomeIcon icon="gift" className="mr-2" />
-                    Issue Free Book
-                  </>
-                )}
-              </Button>
-            </form>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -226,45 +203,53 @@ export function FreeBookTab({ operatorName }: FreeBookTabProps) {
       <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-center text-xl text-green-600">
-              <FontAwesomeIcon icon="check-circle" className="mr-2" />
-              Free Book Issued
+            <DialogTitle className="flex items-center justify-center text-xl">
+              <FontAwesomeIcon icon="check-circle" className="mr-2 text-green-500" />
+              Free Book Processed
             </DialogTitle>
-            <DialogDescription className="text-center">
-              A complimentary yearbook has been issued successfully
-            </DialogDescription>
           </DialogHeader>
           
           {processedStudent && (
             <div className="py-4">
-              <div className="bg-neutral-50 rounded-lg p-4 mb-4">
-                <div className="grid grid-cols-2 gap-y-2">
-                  <div className="text-neutral-600">Student ID:</div>
-                  <div className="font-medium">{processedStudent.studentId}</div>
-                  <div className="text-neutral-600">Name:</div>
-                  <div className="font-medium">{processedStudent.firstName} {processedStudent.lastName}</div>
-                  <div className="text-neutral-600">Order Type:</div>
-                  <div className="font-medium">{processedStudent.orderType}</div>
-                  <div className="text-neutral-600">Order Number:</div>
-                  <div className="font-medium">{processedStudent.orderNumber}</div>
-                  <div className="text-neutral-600">Status:</div>
-                  <div className="font-medium">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                      {processedStudent.paymentStatus}
-                    </span>
+              <div className="bg-green-50 p-4 rounded-lg mb-4">
+                <div className="text-center mb-3">
+                  <div className="text-lg font-bold text-green-800">
+                    {processedStudent.firstName} {processedStudent.lastName}
+                  </div>
+                  <div className="text-sm text-green-600">
+                    ID: {processedStudent.studentId}
                   </div>
                 </div>
+                
+                <div className="text-green-700 text-sm">
+                  <div className="flex justify-between mb-1">
+                    <span>Order Type:</span>
+                    <span className="font-medium">{processedStudent.orderType}</span>
+                  </div>
+                  <div className="flex justify-between mb-1">
+                    <span>Order Number:</span>
+                    <span className="font-medium">{processedStudent.orderNumber}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Payment Status:</span>
+                    <span className="font-medium">{processedStudent.paymentStatus}</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="text-center text-neutral-600 text-sm">
+                A free book has been successfully processed and ready for distribution.
               </div>
             </div>
           )}
           
           <DialogFooter>
             <Button 
-              onClick={resetForm} 
-              className="w-full"
+              className="w-full" 
+              onClick={handleCloseSuccessDialog}
             >
               <FontAwesomeIcon icon="plus" className="mr-2" />
-              Issue Another Free Book
+              Process Another Free Book
             </Button>
           </DialogFooter>
         </DialogContent>
