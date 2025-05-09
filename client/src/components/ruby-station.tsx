@@ -6,7 +6,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Header } from "./header";
 import { Footer } from "./footer";
 import { DatabaseTab } from "./ruby-tabs/DatabaseTab";
-import { ScannerTab } from "./ruby-tabs/ScannerTab-fixed";
+import { ScannerTab } from "./ruby-tabs/ScannerTab";
 import { PosTab } from "./ruby-tabs/PosTab";
 import { CheckersTab } from "./ruby-tabs/CheckersTab";
 import { FreeBookTab } from "./ruby-tabs/FreeBookTab";
@@ -78,7 +78,7 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
                 </TabsContent>
                 
                 <TabsContent value="data">
-                  <DataTab operatorName={operatorName} />
+                  <DataTab />
                 </TabsContent>
                 
                 <TabsContent value="scanner">

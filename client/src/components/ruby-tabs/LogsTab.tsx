@@ -1,236 +1,255 @@
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter
+} from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ActionLog } from "@shared/schema";
-import { useQuery } from "@tanstack/react-query";
-import { useToast } from "@/hooks/use-toast";
-import { socketProvider } from "@/lib/socket";
+import { Badge } from "@/components/ui/badge";
+import { format } from "date-fns";
 
 interface LogsTabProps {
   operatorName: string;
 }
 
-// Define log action types with their display names and colors
-const LOG_TYPES = {
-  'CREATE_STUDENT': { name: 'Create Student', color: 'bg-blue-100 text-blue-800' },
-  'UPDATE_STUDENT': { name: 'Update Student', color: 'bg-green-100 text-green-800' },
-  'DELETE_STUDENT': { name: 'Delete Student', color: 'bg-red-100 text-red-800' },
-  'IMPORT_STUDENTS': { name: 'Import Students', color: 'bg-purple-100 text-purple-800' },
-  'CREATE_DISTRIBUTION': { name: 'Book Distribution', color: 'bg-yellow-100 text-yellow-800' },
-  'VERIFY_DISTRIBUTION': { name: 'Verify Distribution', color: 'bg-green-100 text-green-800' },
-  'PROCESS_PAYMENT': { name: 'Process Payment', color: 'bg-emerald-100 text-emerald-800' },
-  'FREE_BOOK': { name: 'Free Book', color: 'bg-indigo-100 text-indigo-800' },
-};
-
 export function LogsTab({ operatorName }: LogsTabProps) {
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedType, setSelectedType] = useState<string | null>(null);
-  const searchInputRef = useRef<HTMLInputElement>(null);
-  
-  const { toast } = useToast();
+  const [selectedLog, setSelectedLog] = useState<ActionLog | null>(null);
+  const [showDetailDialog, setShowDetailDialog] = useState(false);
   
   // Fetch logs
   const { 
-    data: logs,
+    data: logs, 
     isLoading: logsLoading,
-    refetch: refetchLogs
+    isError: logsError,
+    refetch
   } = useQuery<ActionLog[]>({
     queryKey: ['/api/logs'],
-    refetchInterval: 5000 // Refresh every 5 seconds
+    staleTime: 5000,
   });
   
-  // WebSocket handling
-  useEffect(() => {
-    // Connect to WebSocket
-    socketProvider.connect();
-    
-    const handleLogMessage = () => {
-      refetchLogs();
-    };
-    
-    // Subscribe to log events
-    socketProvider.subscribe('LOG_ACTION', handleLogMessage);
-    socketProvider.subscribe('NEW_DISTRIBUTION', handleLogMessage);
-    socketProvider.subscribe('VERIFY_DISTRIBUTION', handleLogMessage);
-    socketProvider.subscribe('NEW_PAYMENT', handleLogMessage);
-    
-    // Cleanup on unmount
-    return () => {
-      socketProvider.unsubscribe('LOG_ACTION', handleLogMessage);
-      socketProvider.unsubscribe('NEW_DISTRIBUTION', handleLogMessage);
-      socketProvider.unsubscribe('VERIFY_DISTRIBUTION', handleLogMessage);
-      socketProvider.unsubscribe('NEW_PAYMENT', handleLogMessage);
-    };
-  }, [refetchLogs]);
-  
-  // Filter logs based on search term and selected type
+  // Filter logs based on search term
   const filteredLogs = logs?.filter(log => {
-    // Convert details to string if it's not already
-    const detailsStr = typeof log.details === 'object' 
-      ? JSON.stringify(log.details) 
-      : String(log.details || '');
+    if (!searchTerm) return true;
     
-    const matchesSearch = searchTerm === "" || 
-      detailsStr.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (log.studentId?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-      log.operatorName.toLowerCase().includes(searchTerm.toLowerCase());
-      
-    const matchesType = selectedType === null || log.action === selectedType;
-    
-    return matchesSearch && matchesType;
-  }) || [];
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      log.studentId?.toLowerCase().includes(searchLower) ||
+      log.action.toLowerCase().includes(searchLower) ||
+      log.operatorName.toLowerCase().includes(searchLower) ||
+      log.details?.toLowerCase().includes(searchLower)
+    );
+  });
   
-  // Handle filter by type
-  const handleFilterByType = (type: string) => {
-    // If already selected, clear the filter
-    if (selectedType === type) {
-      setSelectedType(null);
-    } else {
-      setSelectedType(type);
-      
-      // No longer setting the search term to match the filter
-      // Focus the search input for additional filtering if needed
-      if (searchInputRef.current) {
-        searchInputRef.current.focus();
-      }
+  // Sort logs by timestamp (newest first)
+  const sortedLogs = filteredLogs?.sort((a, b) => {
+    return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+  });
+  
+  // Get badge color based on action type
+  const getBadgeVariant = (action: string) => {
+    switch (action) {
+      case 'DISTRIBUTE_BOOK':
+      case 'NEW_DISTRIBUTION':
+        return 'default';
+      case 'VERIFY_DISTRIBUTION':
+        return 'secondary';
+      case 'PROCESS_PAYMENT':
+      case 'NEW_PAYMENT':
+        return 'success';
+      case 'ADD_STUDENT':
+      case 'UPDATE_STUDENT':
+        return 'info';
+      case 'FREE_BOOK':
+        return 'warning';
+      default:
+        return 'outline';
     }
   };
   
-  // Clear all filters
-  const clearFilters = () => {
-    setSearchTerm("");
-    setSelectedType(null);
+  // View log details
+  const handleViewDetails = (log: ActionLog) => {
+    setSelectedLog(log);
+    setShowDetailDialog(true);
   };
-
+  
+  // Format JSON for display
+  const formatJsonDisplay = (json: string | object): string => {
+    try {
+      if (typeof json === 'string') {
+        json = JSON.parse(json);
+      }
+      return JSON.stringify(json, null, 2);
+    } catch (e) {
+      return typeof json === 'string' ? json : JSON.stringify(json);
+    }
+  };
+  
   return (
-    <div>
+    <div className="space-y-6">
       <Card>
         <CardContent className="p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-medium text-neutral-800">System Logs</h3>
-          </div>
-          
-          <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
-              <div className="relative flex-1">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-neutral-500">
-                  <FontAwesomeIcon icon="search" />
-                </span>
-                <Input
-                  ref={searchInputRef}
-                  placeholder="Search logs..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 w-full"
-                />
-                {searchTerm && (
-                  <button
-                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-neutral-500 hover:text-neutral-700"
-                    onClick={() => setSearchTerm("")}
-                  >
-                    <FontAwesomeIcon icon="times-circle" />
-                  </button>
-                )}
-              </div>
-              
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={clearFilters}
-                disabled={!searchTerm && !selectedType}
-              >
-                <FontAwesomeIcon icon="filter" className="mr-2" />
-                Clear Filters
+          <div className="flex justify-between items-center mb-6">
+            <div>
+              <h3 className="text-lg font-medium text-neutral-800 mb-1">System Logs</h3>
+              <p className="text-neutral-600 text-sm">View all system actions and events</p>
+            </div>
+            
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => refetch()}>
+                <FontAwesomeIcon icon="sync" className="mr-2" />
+                Refresh
               </Button>
             </div>
-            
-            <div className="flex flex-wrap gap-2">
-              {Object.entries(LOG_TYPES).map(([type, info]) => (
-                <Badge
-                  key={type}
-                  variant="outline"
-                  className={`cursor-pointer hover:opacity-80 ${selectedType === type ? 'ring-2 ring-offset-1 ring-primary' : ''} ${info.color}`}
-                  onClick={() => handleFilterByType(type)}
-                >
-                  {info.name}
-                  {selectedType === type && (
-                    <FontAwesomeIcon icon="check" className="ml-1 text-xs" />
-                  )}
-                </Badge>
-              ))}
+          </div>
+          
+          <div className="mb-4">
+            <Input
+              placeholder="Search logs..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="max-w-sm"
+            />
+          </div>
+          
+          {logsLoading ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="text-center">
+                <FontAwesomeIcon icon="spinner" className="animate-spin text-3xl text-neutral-400 mb-2" />
+                <p className="text-neutral-600">Loading logs...</p>
+              </div>
             </div>
-            
-            {logsLoading ? (
-              <div className="flex justify-center items-center py-12">
-                <FontAwesomeIcon icon="spinner" className="animate-spin text-2xl text-neutral-400" />
-              </div>
-            ) : filteredLogs.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-neutral-500">
-                <FontAwesomeIcon icon="inbox" className="text-3xl mb-4 text-neutral-300" />
-                <p>No logs found {searchTerm && `for "${searchTerm}"`}</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Time</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Student ID</TableHead>
-                      <TableHead>Details</TableHead>
-                      <TableHead>Operator</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredLogs.map(log => (
-                      <TableRow key={log.id}>
+          ) : logsError ? (
+            <Alert variant="destructive" className="mb-4">
+              <AlertDescription>
+                Failed to load logs. Please try refreshing.
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <div className="overflow-auto max-h-[600px] rounded-md border">
+              <Table>
+                <TableCaption>
+                  {sortedLogs?.length 
+                    ? `${sortedLogs.length} log${sortedLogs.length > 1 ? 's' : ''} found`
+                    : 'No logs found'}
+                </TableCaption>
+                <TableHeader className="sticky top-0 bg-white z-10">
+                  <TableRow>
+                    <TableHead className="w-[180px]">Timestamp</TableHead>
+                    <TableHead className="w-[120px]">Student ID</TableHead>
+                    <TableHead className="w-[150px]">Action</TableHead>
+                    <TableHead>Operator</TableHead>
+                    <TableHead className="text-right">Details</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {sortedLogs?.length ? (
+                    sortedLogs.map((log) => (
+                      <TableRow 
+                        key={log.id} 
+                        className="cursor-pointer hover:bg-neutral-50" 
+                        onClick={() => handleViewDetails(log)}
+                      >
                         <TableCell className="whitespace-nowrap">
-                          {new Date(log.timestamp).toLocaleDateString()} {' '}
-                          {new Date(log.timestamp).toLocaleTimeString([], { 
-                            hour: '2-digit', 
-                            minute: '2-digit' 
-                          })}
+                          {format(new Date(log.timestamp), 'MMM d, yyyy h:mm a')}
                         </TableCell>
+                        <TableCell>{log.studentId || '-'}</TableCell>
                         <TableCell>
-                          <Badge 
-                            variant="outline"
-                            className={LOG_TYPES[log.action as keyof typeof LOG_TYPES]?.color || 'bg-neutral-100 text-neutral-800'}
-                          >
-                            {LOG_TYPES[log.action as keyof typeof LOG_TYPES]?.name || log.action}
+                          <Badge variant={getBadgeVariant(log.action) as any}>
+                            {log.action}
                           </Badge>
                         </TableCell>
-                        <TableCell>
-                          {log.studentId ? (
-                            <span className="font-mono">{log.studentId}</span>
-                          ) : (
-                            <span className="text-neutral-400">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="max-w-md truncate">
-                          {typeof log.details === 'object' 
-                            ? JSON.stringify(log.details).slice(0, 100) + (JSON.stringify(log.details).length > 100 ? '...' : '')
-                            : String(log.details || '')}
-                        </TableCell>
                         <TableCell>{log.operatorName}</TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="sm">
+                            <FontAwesomeIcon icon="info-circle" className="mr-2" />
+                            View
+                          </Button>
+                        </TableCell>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-            
-            <div className="text-sm text-neutral-500">
-              Showing {filteredLogs.length} of {logs?.length || 0} logs
-              {searchTerm && ` matching "${searchTerm}"`}
-              {selectedType && ` with type "${LOG_TYPES[selectedType as keyof typeof LOG_TYPES]?.name || selectedType}"`}
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-8 text-neutral-500">
+                        No logs found. System activity will be recorded here.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
             </div>
-          </div>
+          )}
         </CardContent>
       </Card>
+      
+      {/* Log Detail Dialog */}
+      <Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Log Details</DialogTitle>
+          </DialogHeader>
+          
+          {selectedLog && (
+            <div className="py-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <h4 className="text-sm font-medium text-neutral-500 mb-1">Timestamp</h4>
+                  <p className="text-sm">
+                    {format(new Date(selectedLog.timestamp), 'MMMM d, yyyy h:mm:ss a')}
+                  </p>
+                </div>
+                
+                <div>
+                  <h4 className="text-sm font-medium text-neutral-500 mb-1">Action Type</h4>
+                  <Badge variant={getBadgeVariant(selectedLog.action) as any}>
+                    {selectedLog.action}
+                  </Badge>
+                </div>
+                
+                <div>
+                  <h4 className="text-sm font-medium text-neutral-500 mb-1">Student ID</h4>
+                  <p className="text-sm">{selectedLog.studentId || '-'}</p>
+                </div>
+                
+                <div>
+                  <h4 className="text-sm font-medium text-neutral-500 mb-1">Operator</h4>
+                  <p className="text-sm">{selectedLog.operatorName}</p>
+                </div>
+              </div>
+              
+              <div>
+                <h4 className="text-sm font-medium text-neutral-500 mb-2">Details</h4>
+                <pre className="bg-neutral-50 p-3 rounded-md overflow-auto text-xs max-h-[300px]">
+                  {formatJsonDisplay(selectedLog.details || {})}
+                </pre>
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDetailDialog(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
