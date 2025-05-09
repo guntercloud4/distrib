@@ -47,6 +47,21 @@ export function ScannerTab({ operatorName }: ScannerTabProps) {
     refetch
   } = useQuery<Student>({
     queryKey: ['/api/students', studentId],
+    queryFn: async () => {
+      if (!studentId.trim()) {
+        throw new Error("Student ID is required");
+      }
+      const response = await fetch(`/api/students/${studentId}`);
+      
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error(`No student found with ID "${studentId}"`);
+        }
+        throw new Error("Failed to fetch student");
+      }
+      
+      return response.json();
+    },
     enabled: false, // Don't fetch automatically
     staleTime: 10000,
     retry: false

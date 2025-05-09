@@ -12,6 +12,7 @@ import { CheckersTab } from "./ruby-tabs/CheckersTab";
 import { FreeBookTab } from "./ruby-tabs/FreeBookTab";
 import { LogsTab } from "./ruby-tabs/LogsTab";
 import { DataTab } from "./ruby-tabs/DataTab";
+import { OverviewTab } from "./ruby-tabs/OverviewTab";
 
 interface RubyStationProps {
   operatorName: string;
