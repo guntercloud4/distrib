@@ -199,12 +199,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const distribution = await storage.createDistribution(distributionData);
       
       // Log the action
-      await storage.createLog({
+      const actionLog = await storage.createLog({
         studentId: distribution.studentId,
-        action: "DISTRIBUTE_YEARBOOK",
+        action: "CREATE_DISTRIBUTION",
         details: { distribution },
         stationName: "Distribution Station",
         operatorName: distribution.operatorName,
+      });
+      
+      // Broadcast distribution event
+      broadcastMessage({
+        type: 'NEW_DISTRIBUTION',
+        data: distribution
+      });
+      
+      // Also broadcast log event
+      broadcastMessage({
+        type: 'LOG_ACTION',
+        data: actionLog
       });
       
       res.status(201).json(distribution);
@@ -233,12 +245,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Log the action
-      await storage.createLog({
+      const actionLog = await storage.createLog({
         studentId: distribution.studentId,
         action: "VERIFY_DISTRIBUTION",
         details: { distribution },
         stationName: "Checkers Station",
         operatorName: verifiedBy,
+      });
+      
+      // Broadcast verification event
+      broadcastMessage({
+        type: 'VERIFY_DISTRIBUTION',
+        data: distribution
+      });
+      
+      // Also broadcast log event
+      broadcastMessage({
+        type: 'LOG_ACTION',
+        data: actionLog
       });
       
       res.json(distribution);

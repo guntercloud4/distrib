@@ -1,356 +1,226 @@
-import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
-import { useWsLogs } from "@/hooks/use-ws-logs";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { formatDateTime } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { ActionLog } from "@shared/schema";
+import { useQuery } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
+import { socketProvider } from "@/lib/socket";
 
-export function LogsTab() {
-  const [logsFilter, setLogsFilter] = useState<string>("all");
+interface LogsTabProps {
+  operatorName: string;
+}
+
+// Define log action types with their display names and colors
+const LOG_TYPES = {
+  'CREATE_STUDENT': { name: 'Create Student', color: 'bg-blue-100 text-blue-800' },
+  'UPDATE_STUDENT': { name: 'Update Student', color: 'bg-green-100 text-green-800' },
+  'DELETE_STUDENT': { name: 'Delete Student', color: 'bg-red-100 text-red-800' },
+  'IMPORT_STUDENTS': { name: 'Import Students', color: 'bg-purple-100 text-purple-800' },
+  'CREATE_DISTRIBUTION': { name: 'Book Distribution', color: 'bg-yellow-100 text-yellow-800' },
+  'VERIFY_DISTRIBUTION': { name: 'Verify Distribution', color: 'bg-green-100 text-green-800' },
+  'PROCESS_PAYMENT': { name: 'Process Payment', color: 'bg-emerald-100 text-emerald-800' },
+  'FREE_BOOK': { name: 'Free Book', color: 'bg-indigo-100 text-indigo-800' },
+};
+
+export function LogsTab({ operatorName }: LogsTabProps) {
   const [searchTerm, setSearchTerm] = useState("");
-  const [searchField, setSearchField] = useState<string>("all");
-  const [dateFilter, setDateFilter] = useState<string>("all");
-  const { toast } = useToast();
-  const { formattedLogs } = useWsLogs();
+  const [selectedType, setSelectedType] = useState<string | null>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   
-  // Handle logs export
-  const exportLogs = () => {
-    if (formattedLogs && formattedLogs.length > 0) {
-      // Format logs data for CSV export
-      const headers = [
-        "Timestamp", 
-        "Action", 
-        "Details", 
-        "Student ID", 
-        "Operator", 
-        "Station"
-      ].join(',');
+  const { toast } = useToast();
+  
+  // Fetch logs
+  const { 
+    data: logs,
+    isLoading: logsLoading,
+    refetch: refetchLogs
+  } = useQuery<ActionLog[]>({
+    queryKey: ['/api/logs'],
+    refetchInterval: 5000 // Refresh every 5 seconds
+  });
+  
+  // WebSocket handling
+  useEffect(() => {
+    // Connect to WebSocket
+    socketProvider.connect();
+    
+    const handleLogMessage = () => {
+      refetchLogs();
+    };
+    
+    // Subscribe to log events
+    socketProvider.subscribe('LOG_ACTION', handleLogMessage);
+    socketProvider.subscribe('NEW_DISTRIBUTION', handleLogMessage);
+    socketProvider.subscribe('VERIFY_DISTRIBUTION', handleLogMessage);
+    socketProvider.subscribe('NEW_PAYMENT', handleLogMessage);
+    
+    // Cleanup on unmount
+    return () => {
+      socketProvider.unsubscribe('LOG_ACTION', handleLogMessage);
+      socketProvider.unsubscribe('NEW_DISTRIBUTION', handleLogMessage);
+      socketProvider.unsubscribe('VERIFY_DISTRIBUTION', handleLogMessage);
+      socketProvider.unsubscribe('NEW_PAYMENT', handleLogMessage);
+    };
+  }, [refetchLogs]);
+  
+  // Filter logs based on search term and selected type
+  const filteredLogs = logs?.filter(log => {
+    const matchesSearch = searchTerm === "" || 
+      log.details.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      log.studentId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      log.operatorName.toLowerCase().includes(searchTerm.toLowerCase());
       
-      const rows = formattedLogs.map(log => {
-        return [
-          new Date(log.timestamp).toISOString(),
-          log.title,
-          log.details,
-          log.data.studentId || 'N/A',
-          log.data.operatorName || 'System',
-          log.data.stationName || 'N/A'
-        ].map(value => {
-          // Handle strings with commas by wrapping in quotes
-          if (typeof value === 'string' && value.includes(',')) {
-            return `"${value}"`;
-          }
-          return value;
-        }).join(',');
-      });
-      
-      const csv = [headers, ...rows].join('\n');
-      
-      // Create a download link
-      const blob = new Blob([csv], { type: 'text/csv' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `yearbook_logs_${new Date().toISOString().slice(0,10)}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      
-      // Clean up
-      setTimeout(() => {
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }, 100);
-      
-      toast({
-        title: "Logs Exported",
-        description: "System logs exported successfully.",
-      });
+    const matchesType = selectedType === null || log.action === selectedType;
+    
+    return matchesSearch && matchesType;
+  }) || [];
+  
+  // Handle filter by type
+  const handleFilterByType = (type: string) => {
+    // If already selected, clear the filter
+    if (selectedType === type) {
+      setSelectedType(null);
     } else {
-      toast({
-        title: "No Logs",
-        description: "There are no logs to export.",
-        variant: "destructive"
-      });
+      setSelectedType(type);
+      
+      // Set the search term to the selected type name
+      const typeName = LOG_TYPES[type as keyof typeof LOG_TYPES]?.name || type;
+      setSearchTerm(typeName);
+      
+      // Focus the search input
+      if (searchInputRef.current) {
+        searchInputRef.current.focus();
+      }
     }
   };
-
-  // Get filtered logs
-  const filteredLogs = formattedLogs.filter(log => {
-    // Filter by action type
-    if (logsFilter !== 'all') {
-      if (logsFilter === 'distribution' && 
-          !(log.data.action === 'DISTRIBUTE' || log.data.action === 'VERIFY_DISTRIBUTION')) {
-        return false;
-      }
-      if (logsFilter === 'checker' && log.data.action !== 'VERIFY_DISTRIBUTION') {
-        return false;
-      }
-      if (logsFilter === 'cash' && log.data.action !== 'PAYMENT') {
-        return false;
-      }
-      if (logsFilter === 'import' && log.data.action !== 'IMPORT_STUDENTS') {
-        return false;
-      }
-    }
-    
-    // Filter by date
-    if (dateFilter !== 'all') {
-      const today = new Date();
-      const logDate = new Date(log.timestamp);
-      
-      if (dateFilter === 'today') {
-        if (logDate.getDate() !== today.getDate() ||
-            logDate.getMonth() !== today.getMonth() ||
-            logDate.getFullYear() !== today.getFullYear()) {
-          return false;
-        }
-      } else if (dateFilter === 'yesterday') {
-        const yesterday = new Date(today);
-        yesterday.setDate(yesterday.getDate() - 1);
-        
-        if (logDate.getDate() !== yesterday.getDate() ||
-            logDate.getMonth() !== yesterday.getMonth() ||
-            logDate.getFullYear() !== yesterday.getFullYear()) {
-          return false;
-        }
-      } else if (dateFilter === 'week') {
-        const weekAgo = new Date(today);
-        weekAgo.setDate(weekAgo.getDate() - 7);
-        
-        if (logDate < weekAgo) {
-          return false;
-        }
-      }
-    }
-    
-    // Filter by search term if provided
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      
-      if (searchField === 'all') {
-        return (
-          (log.data.studentId && log.data.studentId.toLowerCase().includes(term)) ||
-          (log.data.operatorName && log.data.operatorName.toLowerCase().includes(term)) ||
-          (log.title && log.title.toLowerCase().includes(term)) ||
-          (log.details && log.details.toLowerCase().includes(term)) ||
-          (log.data.stationName && log.data.stationName.toLowerCase().includes(term))
-        );
-      } else if (searchField === 'student') {
-        return log.data.studentId && log.data.studentId.toLowerCase().includes(term);
-      } else if (searchField === 'operator') {
-        return log.data.operatorName && log.data.operatorName.toLowerCase().includes(term);
-      } else if (searchField === 'action') {
-        return log.title && log.title.toLowerCase().includes(term);
-      } else if (searchField === 'station') {
-        return log.data.stationName && log.data.stationName.toLowerCase().includes(term);
-      }
-    }
-    
-    return true;
-  });
+  
+  // Clear all filters
+  const clearFilters = () => {
+    setSearchTerm("");
+    setSelectedType(null);
+  };
 
   return (
     <div>
-      <Card className="mb-6">
+      <Card>
         <CardContent className="p-6">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-medium text-neutral-800">System Logs</h3>
-            <Button 
-              onClick={exportLogs} 
-              className="bg-primary"
-            >
-              <FontAwesomeIcon icon="download" className="mr-2" />
-              Export Logs
-            </Button>
           </div>
           
-          {/* Advanced Search and Filters */}
-          <div className="mb-6 space-y-4">
-            <div className="flex flex-col space-y-2">
-              <label className="text-sm font-medium text-neutral-700">Filter by Action Type</label>
-              <div className="flex flex-wrap gap-2">
-                <Button 
-                  size="sm" 
-                  variant={logsFilter === 'all' ? 'default' : 'outline'} 
-                  className="text-xs px-3"
-                  onClick={() => setLogsFilter('all')}
-                >
-                  <FontAwesomeIcon icon="list-ul" className="mr-1" />
-                  All
-                </Button>
-                <Button 
-                  size="sm" 
-                  variant={logsFilter === 'distribution' ? 'default' : 'outline'} 
-                  className="text-xs px-3"
-                  onClick={() => setLogsFilter('distribution')}
-                >
-                  <FontAwesomeIcon icon="book" className="mr-1" />
-                  Distribution
-                </Button>
-                <Button 
-                  size="sm" 
-                  variant={logsFilter === 'checker' ? 'default' : 'outline'}
-                  className="text-xs px-3"
-                  onClick={() => setLogsFilter('checker')}
-                >
-                  <FontAwesomeIcon icon="check-circle" className="mr-1" />
-                  Verification
-                </Button>
-                <Button 
-                  size="sm" 
-                  variant={logsFilter === 'cash' ? 'default' : 'outline'}
-                  className="text-xs px-3"
-                  onClick={() => setLogsFilter('cash')}
-                >
-                  <FontAwesomeIcon icon="dollar-sign" className="mr-1" />
-                  Payment
-                </Button>
-                <Button 
-                  size="sm" 
-                  variant={logsFilter === 'import' ? 'default' : 'outline'}
-                  className="text-xs px-3"
-                  onClick={() => setLogsFilter('import')}
-                >
-                  <FontAwesomeIcon icon="file-import" className="mr-1" />
-                  Import
-                </Button>
-              </div>
-            </div>
-            
-            <div className="flex flex-col space-y-2">
-              <label className="text-sm font-medium text-neutral-700">Filter by Date</label>
-              <div className="flex flex-wrap gap-2">
-                <Button 
-                  size="sm" 
-                  variant={dateFilter === 'all' ? 'default' : 'outline'} 
-                  className="text-xs px-3"
-                  onClick={() => setDateFilter('all')}
-                >
-                  <FontAwesomeIcon icon="calendar" className="mr-1" />
-                  All Time
-                </Button>
-                <Button 
-                  size="sm" 
-                  variant={dateFilter === 'today' ? 'default' : 'outline'} 
-                  className="text-xs px-3"
-                  onClick={() => setDateFilter('today')}
-                >
-                  <FontAwesomeIcon icon="calendar-day" className="mr-1" />
-                  Today
-                </Button>
-                <Button 
-                  size="sm" 
-                  variant={dateFilter === 'yesterday' ? 'default' : 'outline'}
-                  className="text-xs px-3"
-                  onClick={() => setDateFilter('yesterday')}
-                >
-                  <FontAwesomeIcon icon="calendar-day" className="mr-1" />
-                  Yesterday
-                </Button>
-                <Button 
-                  size="sm" 
-                  variant={dateFilter === 'week' ? 'default' : 'outline'}
-                  className="text-xs px-3"
-                  onClick={() => setDateFilter('week')}
-                >
-                  <FontAwesomeIcon icon="calendar-week" className="mr-1" />
-                  Past Week
-                </Button>
-              </div>
-            </div>
-            
-            <div className="flex space-x-2">
-              <div className="relative flex-grow">
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+              <div className="relative flex-1">
+                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-neutral-500">
+                  <FontAwesomeIcon icon="search" />
+                </span>
                 <Input
-                  type="text"
+                  ref={searchInputRef}
+                  placeholder="Search logs..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Search logs..."
-                  className="w-full pl-10"
+                  className="pl-10 w-full"
                 />
-                <FontAwesomeIcon 
-                  icon="search" 
-                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400" 
-                />
+                {searchTerm && (
+                  <button
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-neutral-500 hover:text-neutral-700"
+                    onClick={() => setSearchTerm("")}
+                  >
+                    <FontAwesomeIcon icon="times-circle" />
+                  </button>
+                )}
               </div>
-              <Select value={searchField} onValueChange={setSearchField}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Search in..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Fields</SelectItem>
-                  <SelectItem value="student">Student ID</SelectItem>
-                  <SelectItem value="operator">Operator</SelectItem>
-                  <SelectItem value="action">Action</SelectItem>
-                  <SelectItem value="station">Station</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          
-          <div className="rounded-md border border-neutral-200 bg-white">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-200 bg-neutral-50">
-              <div className="text-sm font-medium text-neutral-800">
-                {filteredLogs.length} log entries
-              </div>
-              <div className="text-xs text-neutral-500">
-                Showing most recent first
-              </div>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={clearFilters}
+                disabled={!searchTerm && !selectedType}
+              >
+                <FontAwesomeIcon icon="filter" className="mr-2" />
+                Clear Filters
+              </Button>
             </div>
             
-            <div className="space-y-0 divide-y divide-neutral-200 max-h-[600px] overflow-y-auto">
-              {filteredLogs.length > 0 ? (
-                filteredLogs.map((log, index) => (
-                  <div key={index} className="flex items-start p-4 hover:bg-neutral-50 transition-colors">
-                    <div className={`flex-shrink-0 h-8 w-8 rounded-full flex items-center justify-center text-white mr-3
-                      ${log.data.action === 'DISTRIBUTE' ? 'bg-blue-500' : 
-                      log.data.action === 'VERIFY_DISTRIBUTION' ? 'bg-green-500' : 
-                      log.data.action === 'PAYMENT' ? 'bg-purple-500' : 
-                      log.data.action === 'IMPORT_STUDENTS' ? 'bg-amber-500' : 'bg-neutral-500'}`}
-                    >
-                      <FontAwesomeIcon 
-                        icon={
-                          log.data.action === 'DISTRIBUTE' ? 'book' : 
-                          log.data.action === 'VERIFY_DISTRIBUTION' ? 'check-circle' :
-                          log.data.action === 'PAYMENT' ? 'dollar-sign' :
-                          log.data.action === 'IMPORT_STUDENTS' ? 'file-import' : 'info-circle'
-                        } 
-                        size="sm" 
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex justify-between">
-                        <div className="text-sm font-medium text-neutral-800">{log.title}</div>
-                        <div className="text-xs text-neutral-500">
-                          {formatDateTime(log.timestamp)}
-                        </div>
-                      </div>
-                      <div className="text-sm text-neutral-600 mt-1">{log.details}</div>
-                      <div className="flex flex-wrap gap-x-4 mt-2">
-                        <div className="text-xs text-neutral-500 flex items-center">
-                          <FontAwesomeIcon icon="id-card" className="mr-1 text-neutral-400" />
-                          {log.data.studentId || 'N/A'}
-                        </div>
-                        <div className="text-xs text-neutral-500 flex items-center">
-                          <FontAwesomeIcon icon="user" className="mr-1 text-neutral-400" />
-                          {log.data.operatorName || 'System'}
-                        </div>
-                        <div className="text-xs text-neutral-500 flex items-center">
-                          <FontAwesomeIcon icon="desktop" className="mr-1 text-neutral-400" />
-                          {log.data.stationName || 'N/A'}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="text-center text-sm text-neutral-500 py-10">
-                  <FontAwesomeIcon icon="search" className="text-neutral-300 mb-2" size="lg" />
-                  <p>No logs match your search criteria</p>
-                </div>
-              )}
+            <div className="flex flex-wrap gap-2">
+              {Object.entries(LOG_TYPES).map(([type, info]) => (
+                <Badge
+                  key={type}
+                  variant="outline"
+                  className={`cursor-pointer hover:opacity-80 ${selectedType === type ? 'ring-2 ring-offset-1 ring-primary' : ''} ${info.color}`}
+                  onClick={() => handleFilterByType(type)}
+                >
+                  {info.name}
+                  {selectedType === type && (
+                    <FontAwesomeIcon icon="check" className="ml-1 text-xs" />
+                  )}
+                </Badge>
+              ))}
+            </div>
+            
+            {logsLoading ? (
+              <div className="flex justify-center items-center py-12">
+                <FontAwesomeIcon icon="spinner" className="animate-spin text-2xl text-neutral-400" />
+              </div>
+            ) : filteredLogs.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-neutral-500">
+                <FontAwesomeIcon icon="inbox" className="text-3xl mb-4 text-neutral-300" />
+                <p>No logs found {searchTerm && `for "${searchTerm}"`}</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Time</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Student ID</TableHead>
+                      <TableHead>Details</TableHead>
+                      <TableHead>Operator</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredLogs.map(log => (
+                      <TableRow key={log.id}>
+                        <TableCell className="whitespace-nowrap">
+                          {new Date(log.timestamp).toLocaleDateString()} {' '}
+                          {new Date(log.timestamp).toLocaleTimeString([], { 
+                            hour: '2-digit', 
+                            minute: '2-digit' 
+                          })}
+                        </TableCell>
+                        <TableCell>
+                          <Badge 
+                            variant="outline"
+                            className={LOG_TYPES[log.action as keyof typeof LOG_TYPES]?.color || 'bg-neutral-100 text-neutral-800'}
+                          >
+                            {LOG_TYPES[log.action as keyof typeof LOG_TYPES]?.name || log.action}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {log.studentId ? (
+                            <span className="font-mono">{log.studentId}</span>
+                          ) : (
+                            <span className="text-neutral-400">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="max-w-md truncate">{log.details}</TableCell>
+                        <TableCell>{log.operatorName}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+            
+            <div className="text-sm text-neutral-500">
+              Showing {filteredLogs.length} of {logs?.length || 0} logs
+              {searchTerm && ` matching "${searchTerm}"`}
+              {selectedType && ` with type "${LOG_TYPES[selectedType as keyof typeof LOG_TYPES]?.name || selectedType}"`}
             </div>
           </div>
         </CardContent>

@@ -1,133 +1,106 @@
-import { WebSocketMessage } from "@shared/schema";
-
-type MessageHandler = (message: WebSocketMessage) => void;
+type MessageHandler = (message: any) => void;
 
 class SocketProvider {
   private socket: WebSocket | null = null;
-  private messageHandlers: Map<string, Set<MessageHandler>> = new Map();
-  private reconnectTimerId: number | null = null;
-  private reconnectAttempts = 0;
-  private maxReconnectAttempts = 5;
-  private reconnectInterval = 3000; // 3 seconds
-
-  constructor() {
-    this.messageHandlers = new Map();
-  }
-
-  connect() {
-    if (this.socket?.readyState === WebSocket.OPEN) return;
-
-    try {
-      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      const wsUrl = `${protocol}//${window.location.host}/ws`;
-      
-      this.socket = new WebSocket(wsUrl);
-      
-      this.socket.onopen = () => {
-        console.log('WebSocket connection established');
-        this.reconnectAttempts = 0;
-        if (this.reconnectTimerId) {
-          clearTimeout(this.reconnectTimerId);
-          this.reconnectTimerId = null;
-        }
-      };
-      
-      this.socket.onmessage = (event) => {
-        try {
-          const message = JSON.parse(event.data) as WebSocketMessage;
-          this.handleMessage(message);
-        } catch (error) {
-          console.error('Error parsing WebSocket message:', error);
-        }
-      };
-      
-      this.socket.onclose = () => {
-        console.log('WebSocket connection closed');
-        this.attemptReconnect();
-      };
-      
-      this.socket.onerror = (error) => {
-        console.error('WebSocket error:', error);
-        this.socket?.close();
-      };
-    } catch (error) {
-      console.error('Error creating WebSocket connection:', error);
-      this.attemptReconnect();
+  private subscriptions: Record<string, Set<MessageHandler>> = {};
+  private isConnecting: boolean = false;
+  private retryCount: number = 0;
+  private maxRetries: number = 5;
+  private retryDelay: number = 2000;
+  
+  // Connect to the WebSocket server
+  connect(): void {
+    if (this.socket?.readyState === WebSocket.OPEN || this.isConnecting) {
+      return;
     }
-  }
-
-  private attemptReconnect() {
-    if (this.reconnectTimerId) return;
     
-    if (this.reconnectAttempts < this.maxReconnectAttempts) {
-      console.log(`Attempting to reconnect (${this.reconnectAttempts + 1}/${this.maxReconnectAttempts})...`);
-      this.reconnectTimerId = window.setTimeout(() => {
-        this.reconnectAttempts++;
-        this.reconnectTimerId = null;
-        this.connect();
-      }, this.reconnectInterval);
-    } else {
-      console.error('Max reconnect attempts reached. Giving up.');
-    }
-  }
-
-  disconnect() {
-    if (this.socket) {
-      this.socket.close();
+    this.isConnecting = true;
+    
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const wsUrl = `${protocol}//${window.location.host}/ws`;
+    
+    console.log(`Connecting to WebSocket at ${wsUrl}`);
+    
+    this.socket = new WebSocket(wsUrl);
+    
+    this.socket.onopen = () => {
+      console.log("WebSocket connection established");
+      this.isConnecting = false;
+      this.retryCount = 0;
+    };
+    
+    this.socket.onmessage = (event) => {
+      try {
+        const message = JSON.parse(event.data);
+        this.handleMessage(message);
+      } catch (error) {
+        console.error("Error parsing WebSocket message:", error);
+      }
+    };
+    
+    this.socket.onclose = () => {
+      console.log("WebSocket connection closed");
       this.socket = null;
-    }
+      this.isConnecting = false;
+      
+      if (this.retryCount < this.maxRetries) {
+        this.retryCount++;
+        console.log(`Attempting to reconnect (${this.retryCount}/${this.maxRetries})...`);
+        setTimeout(() => this.connect(), this.retryDelay);
+      } else {
+        console.error(`Failed to reconnect after ${this.maxRetries} attempts.`);
+      }
+    };
     
-    if (this.reconnectTimerId) {
-      clearTimeout(this.reconnectTimerId);
-      this.reconnectTimerId = null;
-    }
-    
-    this.messageHandlers.clear();
-  }
-
-  send(message: WebSocketMessage) {
-    if (this.socket?.readyState === WebSocket.OPEN) {
-      this.socket.send(JSON.stringify(message));
-    } else {
-      console.error('Cannot send message: WebSocket not connected');
-    }
-  }
-
-  subscribe(type: string, handler: MessageHandler) {
-    if (!this.messageHandlers.has(type)) {
-      this.messageHandlers.set(type, new Set());
-    }
-    
-    this.messageHandlers.get(type)!.add(handler);
-    
-    return () => {
-      this.unsubscribe(type, handler);
+    this.socket.onerror = (error) => {
+      console.error("WebSocket error:", error);
     };
   }
-
-  unsubscribe(type: string, handler: MessageHandler) {
-    const handlers = this.messageHandlers.get(type);
-    if (handlers) {
-      handlers.delete(handler);
-      if (handlers.size === 0) {
-        this.messageHandlers.delete(type);
-      }
+  
+  // Disconnect from the WebSocket server
+  disconnect(): void {
+    if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+      this.socket.close();
     }
   }
-
-  private handleMessage(message: WebSocketMessage) {
-    // Handle 'all' type handlers
-    const allHandlers = this.messageHandlers.get('all');
-    if (allHandlers) {
-      allHandlers.forEach(handler => handler(message));
+  
+  // Send a message to the WebSocket server
+  send(message: any): void {
+    if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+      this.socket.send(JSON.stringify(message));
+    } else {
+      console.warn("Cannot send message: WebSocket is not connected");
+      this.connect();
+    }
+  }
+  
+  // Subscribe to a specific message type
+  subscribe(type: string, handler: MessageHandler): void {
+    if (!this.subscriptions[type]) {
+      this.subscriptions[type] = new Set();
     }
     
-    // Handle specific type handlers
-    const handlers = this.messageHandlers.get(message.type);
-    if (handlers) {
-      handlers.forEach(handler => handler(message));
+    this.subscriptions[type].add(handler);
+  }
+  
+  // Unsubscribe from a specific message type
+  unsubscribe(type: string, handler: MessageHandler): void {
+    if (this.subscriptions[type]) {
+      this.subscriptions[type].delete(handler);
+    }
+  }
+  
+  // Handle incoming messages
+  private handleMessage(message: any): void {
+    const { type } = message;
+    
+    if (type && this.subscriptions[type]) {
+      this.subscriptions[type].forEach(handler => {
+        handler(message);
+      });
     }
   }
 }
 
+// Export a singleton instance
 export const socketProvider = new SocketProvider();
