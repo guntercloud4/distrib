@@ -36,8 +36,7 @@ export function ScannerTab({ operatorName }: ScannerTabProps) {
     isLoading: studentLoading,
     isError: studentError,
     error: studentErrorData,
-    refetch: refetchStudent,
-    remove: removeStudent
+    refetch: refetchStudent
   } = useQuery<Student>({
     queryKey: ['/api/students', scannedStudentId],
     enabled: !!scannedStudentId && !scanning,
@@ -94,7 +93,6 @@ export function ScannerTab({ operatorName }: ScannerTabProps) {
       
       // Reset state
       setScannedStudentId(null);
-      removeStudent();
       
       // Refocus the input
       if (scannerInputRef.current) {
@@ -128,7 +126,6 @@ export function ScannerTab({ operatorName }: ScannerTabProps) {
   // Handle clear
   const handleClear = () => {
     setScannedStudentId(null);
-    removeStudent();
     setStudentId("");
     
     // Refocus the input

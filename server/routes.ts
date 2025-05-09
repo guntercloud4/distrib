@@ -1,7 +1,7 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupWebSocketServer } from "./ws";
+import { setupWebSocketServer, broadcastMessage } from "./ws";
 import { z } from "zod";
 import { 
   insertStudentSchema, 
@@ -307,12 +307,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const payment = await storage.processPayment(paymentData);
       
       // Log the action
-      await storage.createLog({
+      const actionLog = await storage.createLog({
         studentId: payment.studentId,
         action: "PROCESS_PAYMENT",
         details: { payment },
         stationName: "Cash Station",
         operatorName: payment.operatorName,
+      });
+      
+      // Broadcast payment event
+      broadcastMessage({
+        type: 'NEW_PAYMENT',
+        data: payment
+      });
+      
+      // Also broadcast log event
+      broadcastMessage({
+        type: 'LOG_ACTION',
+        data: actionLog
       });
       
       res.status(201).json(payment);
@@ -356,12 +368,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const importedStudents = await storage.importStudents(parsedStudents);
       
       // Log the action
-      await storage.createLog({
+      const actionLog = await storage.createLog({
         studentId: null,
         action: "IMPORT_STUDENTS",
         details: { count: importedStudents.length },
         stationName: "Ruby Station",
         operatorName,
+      });
+      
+      // Broadcast log event
+      broadcastMessage({
+        type: 'LOG_ACTION',
+        data: actionLog
       });
       
       res.status(201).json({
@@ -394,7 +412,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Update student
       const updatedStudent = await storage.updateStudent(student.id, {
-        balanceDue: 0,
+        balanceDue: "0",
         paymentStatus: "Free",
         yearbook: true,
       });
@@ -406,12 +424,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       // Log the action
-      await storage.createLog({
+      const actionLog = await storage.createLog({
         studentId,
-        action: "ISSUE_FREE_BOOK",
+        action: "FREE_BOOK",
         details: { student: updatedStudent, distribution },
         stationName: "Ruby Station",
         operatorName,
+      });
+      
+      // Broadcast free book distribution event
+      broadcastMessage({
+        type: 'NEW_DISTRIBUTION',
+        data: distribution
+      });
+      
+      // Also broadcast log event
+      broadcastMessage({
+        type: 'LOG_ACTION',
+        data: actionLog
       });
       
       res.json({
