@@ -2,6 +2,8 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupWebSocketServer, broadcastMessage } from "./ws";
+import { db } from "./db";
+import { sql } from "drizzle-orm";
 import { z } from "zod";
 import { 
   insertStudentSchema, 
@@ -18,6 +20,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Setup WebSocket server
   setupWebSocketServer(httpServer);
+  
+  // Database status check route
+  app.get("/api/database/status", async (_req: Request, res: Response) => {
+    try {
+      // Check if database is connected and initialized
+      const result = await db.execute(sql`SELECT NOW()`);
+      
+      // Check if tables exist
+      const studentTableResult = await db.execute(sql`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_schema = 'public' 
+          AND table_name = 'students'
+        );
+      `);
+      
+      const tablesExist = studentTableResult[0].exists;
+      
+      let message = "Database connection established.";
+      if (tablesExist) {
+        message += " All required tables are present.";
+      } else {
+        message += " Database structure is being initialized.";
+      }
+      
+      res.json({ 
+        status: "ok", 
+        message,
+        serverTime: result[0].now,
+        tablesInitialized: tablesExist
+      });
+    } catch (error) {
+      console.error("Database status check failed:", error);
+      res.status(500).json({ 
+        status: "error", 
+        message: "Database connection failed." 
+      });
+    }
+  });
 
   // Get all students
   app.get("/api/students", async (req: Request, res: Response) => {
