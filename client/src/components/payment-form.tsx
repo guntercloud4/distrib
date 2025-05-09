@@ -59,6 +59,21 @@ export function PaymentForm({
       [type]: Math.max(0, value) // Ensure values are not negative
     }));
   };
+  
+  // Add/Remove buttons for each bill denomination
+  const handleAddBill = (type: string) => {
+    setBills(prev => ({
+      ...prev,
+      [type]: prev[type as keyof typeof prev] + 1
+    }));
+  };
+  
+  const handleRemoveBill = (type: string) => {
+    setBills(prev => ({
+      ...prev,
+      [type]: Math.max(0, prev[type as keyof typeof prev] - 1) // Ensure it doesn't go below 0
+    }));
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -136,79 +151,217 @@ export function PaymentForm({
                     <label htmlFor="bills-1" className="block text-sm font-medium text-neutral-700 mb-1">
                       $1 Bills
                     </label>
-                    <Input
-                      type="number"
-                      id="bills-1"
-                      value={bills.one}
-                      min={0}
-                      onChange={(e) => handleBillChange('one', parseInt(e.target.value) || 0)}
-                      disabled={isPending}
-                    />
+                    <div className="flex">
+                      <Button 
+                        type="button" 
+                        size="icon" 
+                        variant="outline" 
+                        className="rounded-r-none" 
+                        onClick={() => handleRemoveBill('one')}
+                        disabled={bills.one === 0 || isPending}
+                      >
+                        <span className="material-icons text-sm">remove</span>
+                      </Button>
+                      <Input
+                        type="number"
+                        id="bills-1"
+                        value={bills.one}
+                        min={0}
+                        onChange={(e) => handleBillChange('one', parseInt(e.target.value) || 0)}
+                        disabled={isPending}
+                        className="rounded-none text-center"
+                      />
+                      <Button 
+                        type="button" 
+                        size="icon" 
+                        variant="outline" 
+                        className="rounded-l-none" 
+                        onClick={() => handleAddBill('one')}
+                        disabled={isPending}
+                      >
+                        <span className="material-icons text-sm">add</span>
+                      </Button>
+                    </div>
                   </div>
                   <div>
                     <label htmlFor="bills-5" className="block text-sm font-medium text-neutral-700 mb-1">
                       $5 Bills
                     </label>
-                    <Input
-                      type="number"
-                      id="bills-5"
-                      value={bills.five}
-                      min={0}
-                      onChange={(e) => handleBillChange('five', parseInt(e.target.value) || 0)}
-                      disabled={isPending}
-                    />
+                    <div className="flex">
+                      <Button 
+                        type="button" 
+                        size="icon" 
+                        variant="outline" 
+                        className="rounded-r-none" 
+                        onClick={() => handleRemoveBill('five')}
+                        disabled={bills.five === 0 || isPending}
+                      >
+                        <span className="material-icons text-sm">remove</span>
+                      </Button>
+                      <Input
+                        type="number"
+                        id="bills-5"
+                        value={bills.five}
+                        min={0}
+                        onChange={(e) => handleBillChange('five', parseInt(e.target.value) || 0)}
+                        disabled={isPending}
+                        className="rounded-none text-center"
+                      />
+                      <Button 
+                        type="button" 
+                        size="icon" 
+                        variant="outline" 
+                        className="rounded-l-none" 
+                        onClick={() => handleAddBill('five')}
+                        disabled={isPending}
+                      >
+                        <span className="material-icons text-sm">add</span>
+                      </Button>
+                    </div>
                   </div>
                   <div>
                     <label htmlFor="bills-10" className="block text-sm font-medium text-neutral-700 mb-1">
                       $10 Bills
                     </label>
-                    <Input
-                      type="number"
-                      id="bills-10"
-                      value={bills.ten}
-                      min={0}
-                      onChange={(e) => handleBillChange('ten', parseInt(e.target.value) || 0)}
-                      disabled={isPending}
-                    />
+                    <div className="flex">
+                      <Button 
+                        type="button" 
+                        size="icon" 
+                        variant="outline" 
+                        className="rounded-r-none" 
+                        onClick={() => handleRemoveBill('ten')}
+                        disabled={bills.ten === 0 || isPending}
+                      >
+                        <span className="material-icons text-sm">remove</span>
+                      </Button>
+                      <Input
+                        type="number"
+                        id="bills-10"
+                        value={bills.ten}
+                        min={0}
+                        onChange={(e) => handleBillChange('ten', parseInt(e.target.value) || 0)}
+                        disabled={isPending}
+                        className="rounded-none text-center"
+                      />
+                      <Button 
+                        type="button" 
+                        size="icon" 
+                        variant="outline" 
+                        className="rounded-l-none" 
+                        onClick={() => handleAddBill('ten')}
+                        disabled={isPending}
+                      >
+                        <span className="material-icons text-sm">add</span>
+                      </Button>
+                    </div>
                   </div>
                   <div>
                     <label htmlFor="bills-20" className="block text-sm font-medium text-neutral-700 mb-1">
                       $20 Bills
                     </label>
-                    <Input
-                      type="number"
-                      id="bills-20"
-                      value={bills.twenty}
-                      min={0}
-                      onChange={(e) => handleBillChange('twenty', parseInt(e.target.value) || 0)}
-                      disabled={isPending}
-                    />
+                    <div className="flex">
+                      <Button 
+                        type="button" 
+                        size="icon" 
+                        variant="outline" 
+                        className="rounded-r-none" 
+                        onClick={() => handleRemoveBill('twenty')}
+                        disabled={bills.twenty === 0 || isPending}
+                      >
+                        <span className="material-icons text-sm">remove</span>
+                      </Button>
+                      <Input
+                        type="number"
+                        id="bills-20"
+                        value={bills.twenty}
+                        min={0}
+                        onChange={(e) => handleBillChange('twenty', parseInt(e.target.value) || 0)}
+                        disabled={isPending}
+                        className="rounded-none text-center"
+                      />
+                      <Button 
+                        type="button" 
+                        size="icon" 
+                        variant="outline" 
+                        className="rounded-l-none" 
+                        onClick={() => handleAddBill('twenty')}
+                        disabled={isPending}
+                      >
+                        <span className="material-icons text-sm">add</span>
+                      </Button>
+                    </div>
                   </div>
                   <div>
                     <label htmlFor="bills-50" className="block text-sm font-medium text-neutral-700 mb-1">
                       $50 Bills
                     </label>
-                    <Input
-                      type="number"
-                      id="bills-50"
-                      value={bills.fifty}
-                      min={0}
-                      onChange={(e) => handleBillChange('fifty', parseInt(e.target.value) || 0)}
-                      disabled={isPending}
-                    />
+                    <div className="flex">
+                      <Button 
+                        type="button" 
+                        size="icon" 
+                        variant="outline" 
+                        className="rounded-r-none" 
+                        onClick={() => handleRemoveBill('fifty')}
+                        disabled={bills.fifty === 0 || isPending}
+                      >
+                        <span className="material-icons text-sm">remove</span>
+                      </Button>
+                      <Input
+                        type="number"
+                        id="bills-50"
+                        value={bills.fifty}
+                        min={0}
+                        onChange={(e) => handleBillChange('fifty', parseInt(e.target.value) || 0)}
+                        disabled={isPending}
+                        className="rounded-none text-center"
+                      />
+                      <Button 
+                        type="button" 
+                        size="icon" 
+                        variant="outline" 
+                        className="rounded-l-none" 
+                        onClick={() => handleAddBill('fifty')}
+                        disabled={isPending}
+                      >
+                        <span className="material-icons text-sm">add</span>
+                      </Button>
+                    </div>
                   </div>
                   <div>
                     <label htmlFor="bills-100" className="block text-sm font-medium text-neutral-700 mb-1">
                       $100 Bills
                     </label>
-                    <Input
-                      type="number"
-                      id="bills-100"
-                      value={bills.hundred}
-                      min={0}
-                      onChange={(e) => handleBillChange('hundred', parseInt(e.target.value) || 0)}
-                      disabled={isPending}
-                    />
+                    <div className="flex">
+                      <Button 
+                        type="button" 
+                        size="icon" 
+                        variant="outline" 
+                        className="rounded-r-none" 
+                        onClick={() => handleRemoveBill('hundred')}
+                        disabled={bills.hundred === 0 || isPending}
+                      >
+                        <span className="material-icons text-sm">remove</span>
+                      </Button>
+                      <Input
+                        type="number"
+                        id="bills-100"
+                        value={bills.hundred}
+                        min={0}
+                        onChange={(e) => handleBillChange('hundred', parseInt(e.target.value) || 0)}
+                        disabled={isPending}
+                        className="rounded-none text-center"
+                      />
+                      <Button 
+                        type="button" 
+                        size="icon" 
+                        variant="outline" 
+                        className="rounded-l-none" 
+                        onClick={() => handleAddBill('hundred')}
+                        disabled={isPending}
+                      >
+                        <span className="material-icons text-sm">add</span>
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </div>

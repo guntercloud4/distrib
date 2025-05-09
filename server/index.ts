@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { initializeDatabase } from "./db";
 
 const app = express();
 app.use(express.json());
@@ -37,7 +38,21 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Start the server first to ensure it's listening on the required port quickly
   const server = await registerRoutes(app);
+  
+  // Then initialize the database without blocking server startup
+  initializeDatabase()
+    .then(initialized => {
+      if (initialized) {
+        log('Database initialized successfully. New tables created.', 'express');
+      } else {
+        log('Database connection established. Tables already exist.', 'express');
+      }
+    })
+    .catch(error => {
+      log(`Database initialization error: ${error}`, 'express');
+    });
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

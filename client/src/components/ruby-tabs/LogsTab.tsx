@@ -92,11 +92,8 @@ export function LogsTab({ operatorName }: LogsTabProps) {
     } else {
       setSelectedType(type);
       
-      // Set the search term to the selected type name
-      const typeName = LOG_TYPES[type as keyof typeof LOG_TYPES]?.name || type;
-      setSearchTerm(typeName);
-      
-      // Focus the search input
+      // No longer setting the search term to match the filter
+      // Focus the search input for additional filtering if needed
       if (searchInputRef.current) {
         searchInputRef.current.focus();
       }
