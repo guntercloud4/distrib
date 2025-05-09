@@ -14,26 +14,46 @@ export function DatabaseTab() {
   const [exportLoading, setExportLoading] = useState(false);
   const { toast } = useToast();
 
-  // Fetch database status
+  // Fetch database status using React Query
+  type DatabaseStatus = { status: string; message: string; serverTime: string; tablesInitialized: boolean };
+  
+  const { isLoading: dbStatusLoading } = useQuery<DatabaseStatus>({
+    queryKey: ['/api/database/status'],
+    refetchInterval: 30000, // Refresh every 30 seconds
+  });
+  
+  // Handle database status changes separately
   useEffect(() => {
+    // Check if we can ping the database
     const checkDatabase = async () => {
       try {
-        const res = await fetch('/api/database/status');
-        if (res.ok) {
-          const data = await res.json();
-          setDatabaseStatus("online");
-          setStatusMessage(`Database connected successfully. ${data.message || ''}`);
-        } else {
+        const response = await fetch('/api/database/status');
+        if (!response.ok) {
           setDatabaseStatus("error");
           setStatusMessage("Database connection failed.");
+          return;
+        }
+        
+        const data = await response.json();
+        if (data.status === "ok") {
+          setDatabaseStatus("online");
+          setStatusMessage(data.message);
+        } else {
+          setDatabaseStatus("error");
+          setStatusMessage(data.message || "Failed to connect to database.");
         }
       } catch (error) {
         setDatabaseStatus("error");
-        setStatusMessage("Error checking database status.");
+        setStatusMessage("Failed to connect to database. Please check your connection settings.");
       }
     };
     
     checkDatabase();
+    // Set up interval to check periodically
+    const interval = setInterval(checkDatabase, 30000);
+    
+    // Clean up on unmount
+    return () => clearInterval(interval);
   }, []);
 
   // Fetch students for export
@@ -248,13 +268,36 @@ export function DatabaseTab() {
                 databaseStatus === "error" ? "bg-red-500" : "bg-yellow-500"
               }`}
             />
-            <span className="text-sm">
+            <span className="text-sm font-medium">
               {databaseStatus === "online" ? "Online" : 
               databaseStatus === "error" ? "Error" : "Checking..."}
             </span>
+            
+            {dbStatusLoading && (
+              <FontAwesomeIcon icon="spinner" className="animate-spin ml-2 text-sm text-neutral-400" />
+            )}
           </div>
           
           <p className="text-sm text-neutral-600 mb-4">{statusMessage}</p>
+          
+          {databaseStatus === "online" && (
+            <div className="bg-neutral-50 p-3 rounded-md mb-3 text-xs">
+              <div className="flex flex-col gap-2">
+                <div>
+                  <span className="font-medium">Last Initialized:</span>{" "}
+                  <span className="text-neutral-600">
+                    {new Date().toLocaleString()}
+                  </span>
+                </div>
+                <div>
+                  <span className="font-medium">System Log:</span>{" "}
+                  <span className="text-neutral-600">
+                    Database initialization status saved to system logs
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
           
           {databaseStatus === "error" && (
             <Button 

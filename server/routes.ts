@@ -2,7 +2,7 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupWebSocketServer, broadcastMessage } from "./ws";
-import { db } from "./db";
+import { db, pool } from "./db";
 import { sql } from "drizzle-orm";
 import { z } from "zod";
 import { 
@@ -25,10 +25,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/database/status", async (_req: Request, res: Response) => {
     try {
       // Check if database is connected and initialized
-      const result = await db.execute(sql`SELECT NOW()`);
+      const result = await pool.query('SELECT NOW()');
       
       // Check if tables exist
-      const studentTableResult = await db.execute(sql`
+      const studentTableResult = await pool.query(`
         SELECT EXISTS (
           SELECT FROM information_schema.tables 
           WHERE table_schema = 'public' 
@@ -36,7 +36,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
       `);
       
-      const tablesExist = studentTableResult[0].exists;
+      const tablesExist = studentTableResult.rows[0]?.exists || false;
+      const serverTime = result.rows[0]?.now || new Date().toISOString();
       
       let message = "Database connection established.";
       if (tablesExist) {
@@ -48,7 +49,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ 
         status: "ok", 
         message,
-        serverTime: result[0].now,
+        serverTime,
         tablesInitialized: tablesExist
       });
     } catch (error) {
