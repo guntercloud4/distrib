@@ -13,8 +13,20 @@ import {
   faSync,
   faDownload,
   faCheck,
+  faCheckCircle,
   faExclamationTriangle,
-  faGift
+  faGift,
+  faListUl,
+  faBook,
+  faDollarSign,
+  faFileImport,
+  faCalendar,
+  faCalendarDay,
+  faCalendarWeek,
+  faIdCard,
+  faUser,
+  faDesktop,
+  faInfoCircle
 } from '@fortawesome/free-solid-svg-icons';
 
 // Add all icons to the library so you can use it in your page
@@ -32,6 +44,18 @@ library.add(
   faSync,
   faDownload,
   faCheck,
+  faCheckCircle,
   faExclamationTriangle,
-  faGift
+  faGift,
+  faListUl,
+  faBook,
+  faDollarSign,
+  faFileImport,
+  faCalendar,
+  faCalendarDay,
+  faCalendarWeek,
+  faIdCard,
+  faUser,
+  faDesktop,
+  faInfoCircle
 );

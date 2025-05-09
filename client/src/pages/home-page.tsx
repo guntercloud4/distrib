@@ -15,9 +15,9 @@ export default function HomePage() {
     selectedStation,
     operatorName,
     selectStation,
-    loginOperator,
-    logoutOperator,
-    showError
+    handleLogin,
+    handleLogout,
+    rubyLoginError
   } = useStationLogin();
 
   return (
@@ -30,36 +30,36 @@ export default function HomePage() {
         ) : !operatorName ? (
           selectedStation === "ruby" ? (
             <RubyStationLogin
-              onLogin={loginOperator}
+              onLogin={handleLogin}
               onBack={() => selectStation(null)}
-              showError={showError}
+              showError={rubyLoginError}
             />
           ) : (
             <StationLogin
               stationType={selectedStation}
-              onLogin={loginOperator}
+              onLogin={handleLogin}
               onBack={() => selectStation(null)}
             />
           )
         ) : selectedStation === "distribution" ? (
           <DistributionStation 
             operatorName={operatorName} 
-            onLogout={logoutOperator} 
+            onLogout={handleLogout} 
           />
         ) : selectedStation === "checker" ? (
           <CheckerStation 
             operatorName={operatorName} 
-            onLogout={logoutOperator} 
+            onLogout={handleLogout} 
           />
         ) : selectedStation === "cash" ? (
           <CashStation 
             operatorName={operatorName} 
-            onLogout={logoutOperator} 
+            onLogout={handleLogout} 
           />
         ) : selectedStation === "ruby" ? (
           <RubyStation
             operatorName={operatorName}
-            onLogout={logoutOperator}
+            onLogout={handleLogout}
           />
         ) : null}
       </main>
