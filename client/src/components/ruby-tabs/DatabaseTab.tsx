@@ -17,10 +17,12 @@ export function DatabaseTab() {
   // Fetch database status using React Query
   type DatabaseStatus = { status: string; message: string; serverTime: string; tablesInitialized: boolean };
 
-  const { isLoading: dbStatusLoading } = useQuery<DatabaseStatus>({
+  const { data: dbStatus, isLoading: dbStatusLoading } = useQuery<DatabaseStatus>({
     queryKey: ['/api/database/status'],
     refetchInterval: 30000, // Refresh every 30 seconds
   });
+
+  const [dbError, setDbError] = useState<Error | null>(null);
 
   // Handle database status changes separately
   useEffect(() => {
@@ -39,6 +41,7 @@ export function DatabaseTab() {
         if (!response.ok) {
           setDatabaseStatus("error");
           setStatusMessage("Database connection failed.");
+          setDbError(new Error("Database connection failed."));
           return;
         }
 
@@ -46,13 +49,16 @@ export function DatabaseTab() {
         if (data.status === "ok") {
           setDatabaseStatus("online");
           setStatusMessage(data.message);
+          setDbError(null);
         } else {
           setDatabaseStatus("error");
           setStatusMessage(data.message || "Failed to connect to database.");
+          setDbError(new Error(data.message || "Failed to connect to database."));
         }
-      } catch (error) {
+      } catch (error: any) {
         setDatabaseStatus("error");
         setStatusMessage("Failed to connect to database. Please check your connection settings.");
+        setDbError(error);
       }
     };
 
