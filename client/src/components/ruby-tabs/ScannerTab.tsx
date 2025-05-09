@@ -213,11 +213,40 @@ export function ScannerTab({ operatorName }: ScannerTabProps) {
               ) : student ? (
                 <div className="bg-neutral-50 p-6 rounded-lg">
                   <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="text-xl font-medium text-neutral-800">
-                        {student.lastName}, {student.firstName}
-                      </h3>
-                      <div className="text-sm text-neutral-500 mt-1">ID: {student.studentId}</div>
+                    <div className="flex">
+                      <div className="mr-4">
+                        <div className="w-24 h-24 bg-neutral-100 rounded overflow-hidden flex items-center justify-center">
+                          {(() => {
+                            // Create image URL from student data
+                            const imageUrl = `https://cdn.gunter.cloud/faces/${student.lastName.toLowerCase()}_${student.firstName.toLowerCase()}.jpg`;
+                            
+                            return (
+                              <img 
+                                src={imageUrl}
+                                alt={`${student.firstName} ${student.lastName}`}
+                                className="object-cover w-full h-full"
+                                onError={(e) => {
+                                  // If image fails to load, show placeholder with icon
+                                  e.currentTarget.src = '';
+                                  e.currentTarget.style.display = 'none';
+                                  e.currentTarget.parentElement?.classList.add('flex', 'items-center', 'justify-center', 'bg-neutral-200');
+                                  // Add placeholder icon
+                                  const icon = document.createElement('span');
+                                  icon.innerHTML = '<i class="fas fa-image fa-2x text-neutral-400"></i>';
+                                  icon.className = 'text-center';
+                                  e.currentTarget.parentElement?.appendChild(icon);
+                                }}
+                              />
+                            )
+                          })()}
+                        </div>
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-medium text-neutral-800">
+                          {student.lastName}, {student.firstName}
+                        </h3>
+                        <div className="text-sm text-neutral-500 mt-1">ID: {student.studentId}</div>
+                      </div>
                     </div>
                     
                     <div className="flex items-center">

@@ -22,8 +22,6 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <Header operatorName={operatorName} />
-      
       <main className="flex-1 container mx-auto py-6 px-4">
         <Card className="mb-6">
           <CardContent className="p-6">
@@ -98,8 +96,6 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
           </CardContent>
         </Card>
       </main>
-      
-      <Footer />
     </div>
   );
 }

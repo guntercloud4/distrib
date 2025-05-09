@@ -15,9 +15,11 @@ import {
   faCheck,
   faCheckCircle,
   faExclamationTriangle,
+  faExclamationCircle,
   faGift,
   faListUl,
   faBook,
+  faBookOpen,
   faDollarSign,
   faFileImport,
   faCalendar,
@@ -26,7 +28,18 @@ import {
   faIdCard,
   faUser,
   faDesktop,
-  faInfoCircle
+  faInfoCircle,
+  faBarcode,
+  faCashRegister,
+  faClipboardCheck,
+  faChevronLeft,
+  faChevronRight,
+  faSpinner,
+  faTimes,
+  faTrashAlt,
+  faHistory,
+  faUserCircle,
+  faImage
 } from '@fortawesome/free-solid-svg-icons';
 
 // Add all icons to the library so you can use it in your page
@@ -46,9 +59,11 @@ library.add(
   faCheck,
   faCheckCircle,
   faExclamationTriangle,
+  faExclamationCircle,
   faGift,
   faListUl,
   faBook,
+  faBookOpen,
   faDollarSign,
   faFileImport,
   faCalendar,
@@ -57,5 +72,16 @@ library.add(
   faIdCard,
   faUser,
   faDesktop,
-  faInfoCircle
+  faInfoCircle,
+  faBarcode,
+  faCashRegister,
+  faClipboardCheck,
+  faChevronLeft,
+  faChevronRight,
+  faSpinner,
+  faTimes,
+  faTrashAlt,
+  faHistory,
+  faUserCircle,
+  faImage
 );
