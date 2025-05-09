@@ -1,16 +1,16 @@
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Student, Distribution } from "@shared/schema";
-import { socketProvider } from "@/lib/socket";
 import { formatDateTime } from "@/lib/utils";
-import { useWsLogs } from "@/hooks/use-ws-logs";
-import { Badge } from "@/components/ui/badge";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { socketProvider } from "@/lib/socket";
+import { RecentActivity } from "./recent-activity";
 
 interface CheckerStationProps {
   operatorName: string;
@@ -18,68 +18,88 @@ interface CheckerStationProps {
 }
 
 export function CheckerStation({ operatorName, onLogout }: CheckerStationProps) {
-  const [searchTerm, setSearchTerm] = useState("");
+  const [activeTab, setActiveTab] = useState("pending");
   const { toast } = useToast();
-  const { formattedLogs } = useWsLogs();
   
-  // Fetch active distributions that need verification
+  // Fetch distributions
   const { 
-    data: distributions, 
-    isLoading: isLoadingDistributions,
+    data: distributions,
+    isLoading: distributionsLoading,
     refetch: refetchDistributions
   } = useQuery<Distribution[]>({
     queryKey: ['/api/distributions'],
-    refetchInterval: 5000 // Refresh every 5 seconds to catch new distributions
+    refetchInterval: 5000 // Refresh every 5 seconds to check for new distributions
   });
   
-  // Filter to only get unverified distributions
-  const unverifiedDistributions = distributions?.filter(d => !d.verified) || [];
+  // Split distributions into pending and confirmed
+  // Note: We're working with timestamp field but in UI we'll call it distributionDate for clarity
+  const pendingDistributions = distributions?.filter(dist => !dist.verifiedAt) || [];
+  const confirmedDistributions = distributions?.filter(dist => dist.verifiedAt) || [];
   
-  // Filter distributions based on search term
-  const filteredDistributions = unverifiedDistributions.filter(dist => {
-    if (!searchTerm) return true;
+  // WebSocket handling
+  useEffect(() => {
+    const handleWebSocketMessage = (event: MessageEvent) => {
+      try {
+        const message = JSON.parse(event.data);
+        
+        // If the message is about a new distribution, refetch distributions
+        if (message.type === 'NEW_DISTRIBUTION' || message.type === 'VERIFY_DISTRIBUTION') {
+          refetchDistributions();
+        }
+      } catch (error) {
+        console.error("Failed to parse WebSocket message:", error);
+      }
+    };
     
-    const term = searchTerm.toLowerCase();
-    return (
-      dist.studentId.toLowerCase().includes(term) ||
-      dist.studentName.toLowerCase().includes(term)
-    );
-  });
+    // Register WebSocket event handler
+    window.addEventListener("message", (event) => {
+      if (event.data.type === "ws-message") {
+        handleWebSocketMessage(event.data.data);
+      }
+    });
+    
+    // Cleanup event handler on unmount
+    return () => {
+      window.removeEventListener("message", (event) => {
+        if (event.data.type === "ws-message") {
+          handleWebSocketMessage(event.data.data);
+        }
+      });
+    };
+  }, [refetchDistributions]);
   
-  // Fetch student data for each distribution
-  const { data: students } = useQuery<Student[]>({
-    queryKey: ['/api/students'],
-    staleTime: 30000 // 30 seconds
-  });
-  
-  // Verification mutation
-  const verifyMutation = useMutation({
-    mutationFn: async ({ id, verifiedBy }: { id: number, verifiedBy: string }) => {
-      const res = await apiRequest('PUT', `/api/distributions/${id}/verify`, { verifiedBy });
+  // Verify distribution mutation
+  const verifyDistributionMutation = useMutation({
+    mutationFn: async ({ id, operatorName }: { id: number, operatorName: string }) => {
+      const res = await apiRequest('PUT', `/api/distributions/${id}/verify`, { verifiedBy: operatorName });
       return await res.json();
     },
     onSuccess: (data) => {
       toast({
         title: "Distribution Verified",
-        description: `Successfully verified distribution for ${data.studentName}`,
+        description: "The yearbook distribution has been verified.",
       });
       
-      // Log the action via WebSocket
+      // Log the verification via WebSocket
       socketProvider.send({
-        type: 'VERIFY_DISTRIBUTION',
+        type: 'LOG_ACTION',
         data: {
           id: Date.now(),
           timestamp: new Date(),
           studentId: data.studentId,
           action: 'VERIFY_DISTRIBUTION',
-          details: { distributionId: data.id },
+          details: { },
           stationName: 'Checker Station',
-          operatorName,
-          studentName: data.studentName
+          operatorName
         }
       });
       
-      // Refetch distributions to update the list
+      // Broadcast the verification via WebSocket
+      socketProvider.send({
+        type: 'VERIFY_DISTRIBUTION',
+        data: data
+      });
+      
       refetchDistributions();
     },
     onError: (error: Error) => {
@@ -91,187 +111,183 @@ export function CheckerStation({ operatorName, onLogout }: CheckerStationProps) 
     }
   });
   
+  // Student information map for quicker lookup
+  const [studentMap, setStudentMap] = useState<Record<string, Student>>({});
+  
+  // Fetch all students to build the map
+  useQuery<Student[]>({
+    queryKey: ['/api/students'],
+    onSuccess: (data) => {
+      const map: Record<string, Student> = {};
+      data.forEach(student => {
+        map[student.studentId] = student;
+      });
+      setStudentMap(map);
+    }
+  });
+  
   // Handle verification
   const handleVerify = (id: number) => {
-    verifyMutation.mutate({ id, verifiedBy: operatorName });
+    verifyDistributionMutation.mutate({ id, operatorName });
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 fade-in">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 fade-in">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-semibold text-neutral-800">Checker Station</h2>
-        <div className="flex items-center">
-          <div className="text-sm text-neutral-600 mr-4">
-            <span className="font-medium">Operator:</span> {operatorName}
-          </div>
-          <Button
-            variant="outline"
-            onClick={onLogout}
-            className="text-neutral-600 hover:text-neutral-800"
-          >
-            <FontAwesomeIcon icon="sign-out-alt" className="mr-2" />
-            Exit Station
-          </Button>
-        </div>
+        <Button 
+          variant="outline" 
+          onClick={onLogout}
+          className="text-neutral-600 hover:text-neutral-800"
+        >
+          <FontAwesomeIcon icon="sign-out-alt" className="mr-2" />
+          Exit Station
+        </Button>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="md:col-span-2">
-          <Card>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <Card className="mb-6">
             <CardContent className="p-6">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-medium text-neutral-800">Verification Queue</h3>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 flex items-center pl-3 text-neutral-500">
-                    <FontAwesomeIcon icon="search" className="text-sm" />
-                  </div>
-                  <Input
-                    type="text"
-                    placeholder="Search by name or ID..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 py-1 h-9 text-sm"
-                  />
-                </div>
+                <h3 className="text-lg font-medium text-neutral-800">Distribution Verification</h3>
               </div>
               
-              {isLoadingDistributions ? (
-                <div className="text-center py-12">
-                  <FontAwesomeIcon icon="sync" className="animate-spin text-2xl text-neutral-400 mb-3" />
-                  <p className="text-sm text-neutral-600">Loading verification queue...</p>
-                </div>
-              ) : filteredDistributions.length > 0 ? (
-                <div className="overflow-hidden overflow-x-auto">
-                  <table className="min-w-full divide-y divide-neutral-200">
-                    <thead>
-                      <tr>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">Student Name</th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">ID</th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">Distributed At</th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">Status</th>
-                        <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-neutral-500 uppercase tracking-wider">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-neutral-200">
-                      {filteredDistributions.map((distribution) => (
-                        <tr key={distribution.id}>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-neutral-800">
-                            {distribution.studentName}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-600">
-                            {distribution.studentId}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-600">
-                            {formatDateTime(distribution.timestamp)}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <Badge
-                              variant="outline"
-                              className="bg-yellow-100 text-yellow-800 border-yellow-200"
-                            >
-                              Needs Verification
-                            </Badge>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
+              <Tabs value={activeTab} onValueChange={setActiveTab}>
+                <TabsList className="mb-4">
+                  <TabsTrigger value="pending" className="relative">
+                    Pending
+                    {pendingDistributions.length > 0 && (
+                      <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-medium text-white">
+                        {pendingDistributions.length}
+                      </span>
+                    )}
+                  </TabsTrigger>
+                  <TabsTrigger value="confirmed">Confirmed</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="pending">
+                  {distributionsLoading ? (
+                    <div className="text-center py-12">
+                      <FontAwesomeIcon icon="sync" className="animate-spin text-primary mb-3" size="2x" />
+                      <p>Loading distributions...</p>
+                    </div>
+                  ) : pendingDistributions.length === 0 ? (
+                    <div className="text-center py-12 bg-neutral-50 rounded-lg border border-neutral-200">
+                      <FontAwesomeIcon icon="check" className="text-green-500 mb-3" size="2x" />
+                      <h3 className="text-lg font-medium mb-1">You're all caught up!</h3>
+                      <p className="text-neutral-600">No pending distributions to verify.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {pendingDistributions.map((distribution) => {
+                        const student = studentMap[distribution.studentId];
+                        return (
+                          <div 
+                            key={distribution.id} 
+                            className="flex items-center justify-between p-4 bg-white rounded-lg border border-neutral-200 hover:border-primary transition-colors"
+                          >
+                            <div>
+                              <div className="font-medium">
+                                {student ? `${student.firstName} ${student.lastName}` : distribution.studentId}
+                              </div>
+                              <div className="text-sm text-neutral-500">
+                                Distributed {formatDateTime(distribution.timestamp)}
+                              </div>
+                              <div className="text-sm text-neutral-500">
+                                By {distribution.distributedBy || 'Unknown'}
+                              </div>
+                            </div>
                             <Button 
-                              variant="secondary"
-                              size="sm"
                               onClick={() => handleVerify(distribution.id)}
-                              disabled={verifyMutation.isPending}
-                              className="bg-green-600 hover:bg-green-700 text-white"
+                              disabled={verifyDistributionMutation.isPending}
+                              className="bg-primary hover:bg-primary-dark"
                             >
-                              <FontAwesomeIcon icon="check" className="mr-2" />
-                              Verify
+                              {verifyDistributionMutation.isPending && verifyDistributionMutation.variables?.id === distribution.id ? (
+                                <>
+                                  <FontAwesomeIcon icon="sync" className="mr-2 animate-spin" />
+                                  Verifying...
+                                </>
+                              ) : (
+                                <>
+                                  <FontAwesomeIcon icon="check" className="mr-2" />
+                                  Confirm
+                                </>
+                              )}
                             </Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="text-center py-16 bg-neutral-50 rounded-lg">
-                  <div className="bg-white rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4 shadow-sm">
-                    <FontAwesomeIcon icon="check-circle" className="text-2xl text-green-600" />
-                  </div>
-                  <h4 className="text-lg font-medium text-neutral-700 mb-2">You're all caught up!</h4>
-                  <p className="text-sm text-neutral-500 max-w-md mx-auto">
-                    Wait for names to pop up here when books are distributed and need verification.
-                  </p>
-                </div>
-              )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </TabsContent>
+                
+                <TabsContent value="confirmed">
+                  {distributionsLoading ? (
+                    <div className="text-center py-12">
+                      <FontAwesomeIcon icon="sync" className="animate-spin text-primary mb-3" size="2x" />
+                      <p>Loading verified distributions...</p>
+                    </div>
+                  ) : confirmedDistributions.length === 0 ? (
+                    <div className="text-center py-12 bg-neutral-50 rounded-lg border border-neutral-200">
+                      <FontAwesomeIcon icon="info-circle" className="text-blue-500 mb-3" size="2x" />
+                      <h3 className="text-lg font-medium mb-1">No Verified Distributions</h3>
+                      <p className="text-neutral-600">Confirmed distributions will appear here.</p>
+                    </div>
+                  ) : (
+                    <div className="border rounded-md overflow-hidden">
+                      <table className="min-w-full divide-y divide-neutral-200">
+                        <thead className="bg-neutral-50">
+                          <tr>
+                            <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">Student</th>
+                            <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">Distributed By</th>
+                            <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">Distribution Date</th>
+                            <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">Verified By</th>
+                            <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">Verification Date</th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-neutral-200">
+                          {confirmedDistributions.map((distribution) => {
+                            const student = studentMap[distribution.studentId];
+                            return (
+                              <tr key={distribution.id} className="hover:bg-neutral-50">
+                                <td className="px-4 py-3 whitespace-nowrap">
+                                  <div className="font-medium">
+                                    {student ? `${student.firstName} ${student.lastName}` : distribution.studentId}
+                                  </div>
+                                  <div className="text-xs text-neutral-500">
+                                    ID: {distribution.studentId}
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3 whitespace-nowrap text-sm">
+                                  {distribution.distributedBy || "Unknown"}
+                                </td>
+                                <td className="px-4 py-3 whitespace-nowrap text-sm">
+                                  {formatDateTime(distribution.timestamp)}
+                                </td>
+                                <td className="px-4 py-3 whitespace-nowrap text-sm">
+                                  {distribution.verifiedBy || "N/A"}
+                                </td>
+                                <td className="px-4 py-3 whitespace-nowrap text-sm">
+                                  {distribution.verifiedAt ? formatDateTime(distribution.verifiedAt) : "N/A"}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </TabsContent>
+              </Tabs>
             </CardContent>
           </Card>
         </div>
         
-        <div className="md:col-span-1">
-          <Card className="mb-6">
-            <CardContent className="p-6">
-              <h3 className="text-lg font-medium text-neutral-800 mb-4">Recent Activity</h3>
-              <div className="space-y-4 max-h-[350px] overflow-y-auto">
-                {formattedLogs.filter(log => log.data.action === 'VERIFY_DISTRIBUTION').length > 0 ? (
-                  formattedLogs
-                    .filter(log => log.data.action === 'VERIFY_DISTRIBUTION')
-                    .slice(0, 10)
-                    .map((log, index) => (
-                      <div key={index} className="flex items-start space-x-3 pb-3 border-b border-neutral-100">
-                        <div className="flex-shrink-0 h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
-                          <FontAwesomeIcon icon="check" className="text-green-600" />
-                        </div>
-                        <div>
-                          <p className="text-sm text-neutral-800">
-                            <span className="font-medium">Verified:</span> {log.data.studentName || log.data.studentId}
-                          </p>
-                          <p className="text-xs text-neutral-500">
-                            {new Date(log.timestamp).toLocaleTimeString()} by {log.data.operatorName}
-                          </p>
-                        </div>
-                      </div>
-                    ))
-                ) : (
-                  <div className="text-center py-8">
-                    <div className="bg-neutral-100 rounded-full h-12 w-12 flex items-center justify-center mx-auto mb-3">
-                      <FontAwesomeIcon icon="info-circle" className="text-neutral-400" />
-                    </div>
-                    <p className="text-sm text-neutral-600">No verification activity yet.</p>
-                    <p className="text-xs text-neutral-500 mt-1">Recent verifications will appear here.</p>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-6">
-              <h3 className="text-lg font-medium text-neutral-800 mb-4">Checker Guide</h3>
-              <div className="space-y-4 text-sm text-neutral-600">
-                <div className="flex items-start space-x-3">
-                  <div className="flex-shrink-0 h-6 w-6 rounded-full bg-blue-100 flex items-center justify-center">
-                    <FontAwesomeIcon icon="info" className="text-blue-600 text-xs" />
-                  </div>
-                  <p>Check student ID and verify they have received the correct yearbook</p>
-                </div>
-                <div className="flex items-start space-x-3">
-                  <div className="flex-shrink-0 h-6 w-6 rounded-full bg-blue-100 flex items-center justify-center">
-                    <FontAwesomeIcon icon="info" className="text-blue-600 text-xs" />
-                  </div>
-                  <p>Ensure all accessories (if ordered) are included in the package</p>
-                </div>
-                <div className="flex items-start space-x-3">
-                  <div className="flex-shrink-0 h-6 w-6 rounded-full bg-blue-100 flex items-center justify-center">
-                    <FontAwesomeIcon icon="info" className="text-blue-600 text-xs" />
-                  </div>
-                  <p>Verify student name is correctly printed on personalized books</p>
-                </div>
-                <div className="flex items-start space-x-3">
-                  <div className="flex-shrink-0 h-6 w-6 rounded-full bg-blue-100 flex items-center justify-center">
-                    <FontAwesomeIcon icon="info" className="text-blue-600 text-xs" />
-                  </div>
-                  <p>Direct students with payment issues to the Cash Station</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        {/* Recent Activity */}
+        <div>
+          <h3 className="text-lg font-medium text-neutral-800 mb-4">Recent Activity</h3>
+          <RecentActivity stationType="checker" />
         </div>
       </div>
     </div>
