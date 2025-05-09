@@ -11,6 +11,7 @@ import { PosTab } from "./ruby-tabs/PosTab";
 import { CheckersTab } from "./ruby-tabs/CheckersTab";
 import { FreeBookTab } from "./ruby-tabs/FreeBookTab";
 import { LogsTab } from "./ruby-tabs/LogsTab";
+import { DataTab } from "./ruby-tabs/DataTab";
 
 interface RubyStationProps {
   operatorName: string;
@@ -40,10 +41,14 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
               onValueChange={setActiveTab}
               className="w-full"
             >
-              <TabsList className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
+              <TabsList className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-2">
                 <TabsTrigger value="database">
                   <FontAwesomeIcon icon="database" className="mr-2" />
                   <span className="hidden md:inline">Database</span>
+                </TabsTrigger>
+                <TabsTrigger value="data">
+                  <FontAwesomeIcon icon="table" className="mr-2" />
+                  <span className="hidden md:inline">Data</span>
                 </TabsTrigger>
                 <TabsTrigger value="scanner">
                   <FontAwesomeIcon icon="barcode" className="mr-2" />
@@ -70,6 +75,10 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
               <div className="mt-6">
                 <TabsContent value="database">
                   <DatabaseTab operatorName={operatorName} />
+                </TabsContent>
+                
+                <TabsContent value="data">
+                  <DataTab operatorName={operatorName} />
                 </TabsContent>
                 
                 <TabsContent value="scanner">
