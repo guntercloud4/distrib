@@ -1,5 +1,6 @@
 import { formatDateTime } from "@/lib/utils";
 import { useState, useEffect } from "react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 interface HeaderProps {
   operatorName: string;
@@ -29,7 +30,7 @@ export function Header({ operatorName }: HeaderProps) {
           <div className="flex items-center space-x-2">
             <span className="text-sm font-medium text-neutral-700">{operatorName || "Not logged in"}</span>
             <span className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-white">
-              <span className="material-icons text-sm">person</span>
+              <FontAwesomeIcon icon="user" />
             </span>
           </div>
         </div>

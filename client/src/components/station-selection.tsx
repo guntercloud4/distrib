@@ -1,4 +1,5 @@
 import { StationType } from "@/hooks/use-station-login";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 interface StationSelectionProps {
   onSelectStation: (station: StationType) => void;
@@ -15,7 +16,7 @@ export function StationSelection({ onSelectStation }: StationSelectionProps) {
           onClick={() => onSelectStation('distribution')}
         >
           <div className="flex items-center justify-center h-12 w-12 rounded-md bg-primary text-white mb-4">
-            <span className="material-icons">qr_code_scanner</span>
+            <FontAwesomeIcon icon="qrcode" />
           </div>
           <h3 className="text-lg font-medium text-neutral-800">Distribution Station</h3>
           <p className="mt-2 text-sm text-neutral-600">Scan student IDs and distribute yearbooks</p>
@@ -27,7 +28,7 @@ export function StationSelection({ onSelectStation }: StationSelectionProps) {
           onClick={() => onSelectStation('checker')}
         >
           <div className="flex items-center justify-center h-12 w-12 rounded-md bg-secondary text-white mb-4">
-            <span className="material-icons">fact_check</span>
+            <FontAwesomeIcon icon="check-double" />
           </div>
           <h3 className="text-lg font-medium text-neutral-800">Checkers Station</h3>
           <p className="mt-2 text-sm text-neutral-600">Verify yearbook deliveries and record checkoffs</p>
@@ -39,7 +40,7 @@ export function StationSelection({ onSelectStation }: StationSelectionProps) {
           onClick={() => onSelectStation('cash')}
         >
           <div className="flex items-center justify-center h-12 w-12 rounded-md bg-neutral-700 text-white mb-4">
-            <span className="material-icons">payments</span>
+            <FontAwesomeIcon icon="cash-register" />
           </div>
           <h3 className="text-lg font-medium text-neutral-800">Cash Station</h3>
           <p className="mt-2 text-sm text-neutral-600">Process cash payments and calculate change</p>
@@ -51,7 +52,7 @@ export function StationSelection({ onSelectStation }: StationSelectionProps) {
           onClick={() => onSelectStation('ruby')}
         >
           <div className="flex items-center justify-center h-12 w-12 rounded-md bg-destructive text-white mb-4">
-            <span className="material-icons">admin_panel_settings</span>
+            <FontAwesomeIcon icon="shield-alt" />
           </div>
           <h3 className="text-lg font-medium text-neutral-800">Ruby Station</h3>
           <p className="mt-2 text-sm text-neutral-600">Admin access for system management</p>

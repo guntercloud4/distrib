@@ -1,0 +1,160 @@
+client:536 WebSocket connection to 'wss://2a67b226-ff2a-4afc-8ab5-51eea562573c-00-26s5x7mwlmql1.spock.replit.dev/?token=U0lBMKo3VS9h' failed: 
+setupWebSocket @ client:536
+client:536 Uncaught (in promise) SyntaxError: Failed to construct 'WebSocket': The URL 'wss://localhost:undefined/?token=U0lBMKo3VS9h' is invalid.
+    at setupWebSocket (client:536:19)
+    at fallback (client:509:16)
+    at WebSocket.<anonymous> (client:555:7)
+chunk-WERSD76P.js?v=62f98e65:21551 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+socket.ts:22 Connecting to WebSocket at wss://2a67b226-ff2a-4afc-8ab5-51eea562573c-00-26s5x7mwlmql1.spock.replit.dev/ws
+socket.ts:27 WebSocket connection established
+@fortawesome_react-fontawesome.js?v=62f98e65:986 Could not find icon Object
+log @ @fortawesome_react-fontawesome.js?v=62f98e65:986
+@fortawesome_react-fontawesome.js?v=62f98e65:986 Could not find icon Object
+log @ @fortawesome_react-fontawesome.js?v=62f98e65:986
+@fortawesome_react-fontawesome.js?v=62f98e65:986 Could not find icon Object
+log @ @fortawesome_react-fontawesome.js?v=62f98e65:986
+@fortawesome_react-fontawesome.js?v=62f98e65:986 Could not find icon Object
+log @ @fortawesome_react-fontawesome.js?v=62f98e65:986
+@fortawesome_react-fontawesome.js?v=62f98e65:986 Could not find icon Object
+log @ @fortawesome_react-fontawesome.js?v=62f98e65:986
+@fortawesome_react-fontawesome.js?v=62f98e65:986 Could not find icon Object
+log @ @fortawesome_react-fontawesome.js?v=62f98e65:986
+@fortawesome_react-fontawesome.js?v=62f98e65:986 Could not find icon Object
+log @ @fortawesome_react-fontawesome.js?v=62f98e65:986
+@fortawesome_react-fontawesome.js?v=62f98e65:986 Could not find icon Object
+log @ @fortawesome_react-fontawesome.js?v=62f98e65:986
+@fortawesome_react-fontawesome.js?v=62f98e65:986 Could not find icon Object
+log @ @fortawesome_react-fontawesome.js?v=62f98e65:986
+/api/students/90225777:1 
+            
+            
+           Failed to load resource: the server responded with a status of 404 (Not Found)
+@fortawesome_react-fontawesome.js?v=62f98e65:986 Could not find icon Object
+log @ @fortawesome_react-fontawesome.js?v=62f98e65:986
+@fortawesome_react-fontawesome.js?v=62f98e65:986 Could not find icon Object
+log @ @fortawesome_react-fontawesome.js?v=62f98e65:986
+@fortawesome_react-fontawesome.js?v=62f98e65:986 Could not find icon Object
+log @ @fortawesome_react-fontawesome.js?v=62f98e65:986
+@fortawesome_react-fontawesome.js?v=62f98e65:986 Could not find icon Object
+log @ @fortawesome_react-fontawesome.js?v=62f98e65:986
+@fortawesome_react-fontawesome.js?v=62f98e65:986 Could not find icon Object
+log @ @fortawesome_react-fontawesome.js?v=62f98e65:986
+@fortawesome_react-fontawesome.js?v=62f98e65:986 Could not find icon Object
+log @ @fortawesome_react-fontawesome.js?v=62f98e65:986
+@fortawesome_react-fontawesome.js?v=62f98e65:986 Could not find icon Object
+log @ @fortawesome_react-fontawesome.js?v=62f98e65:986
+@fortawesome_react-fontawesome.js?v=62f98e65:986 Could not find icon Object
+log @ @fortawesome_react-fontawesome.js?v=62f98e65:986
+@fortawesome_react-fontawesome.js?v=62f98e65:986 Could not find icon Object
+log @ @fortawesome_react-fontawesome.js?v=62f98e65:986
+@fortawesome_react-fontawesome.js?v=62f98e65:986 Could not find icon Object
+log @ @fortawesome_react-fontawesome.js?v=62f98e65:986
+@fortawesome_react-fontawesome.js?v=62f98e65:986 Could not find icon Object
+log @ @fortawesome_react-fontawesome.js?v=62f98e65:986
+@fortawesome_react-fontawesome.js?v=62f98e65:986 Could not find icon Object
+log @ @fortawesome_react-fontawesome.js?v=62f98e65:986
+@fortawesome_react-fontawesome.js?v=62f98e65:986 Could not find icon Object
+log @ @fortawesome_react-fontawesome.js?v=62f98e65:986
+@fortawesome_react-fontawesome.js?v=62f98e65:986 Could not find icon Object
+log @ @fortawesome_react-fontawesome.js?v=62f98e65:986
+@fortawesome_react-fontawesome.js?v=62f98e65:986 Could not find icon Object
+log @ @fortawesome_react-fontawesome.js?v=62f98e65:986
+@fortawesome_react-fontawesome.js?v=62f98e65:986 Could not find icon Object
+log @ @fortawesome_react-fontawesome.js?v=62f98e65:986
+@fortawesome_react-fontawesome.js?v=62f98e65:986 Could not find icon Object
+log @ @fortawesome_react-fontawesome.js?v=62f98e65:986
+@fortawesome_react-fontawesome.js?v=62f98e65:986 Could not find icon Object
+log @ @fortawesome_react-fontawesome.js?v=62f98e65:986
+@fortawesome_react-fontawesome.js?v=62f98e65:986 Could not find icon Object
+log @ @fortawesome_react-fontawesome.js?v=62f98e65:986
+@fortawesome_react-fontawesome.js?v=62f98e65:986 Could not find icon Object
+log @ @fortawesome_react-fontawesome.js?v=62f98e65:986
+@fortawesome_react-fontawesome.js?v=62f98e65:986 Could not find icon Object
+log @ @fortawesome_react-fontawesome.js?v=62f98e65:986
+@fortawesome_react-fontawesome.js?v=62f98e65:986 Could not find icon Object
+log @ @fortawesome_react-fontawesome.js?v=62f98e65:986
+@fortawesome_react-fontawesome.js?v=62f98e65:986 Could not find icon Object
+log @ @fortawesome_react-fontawesome.js?v=62f98e65:986
+@fortawesome_react-fontawesome.js?v=62f98e65:986 Could not find icon Object
+log @ @fortawesome_react-fontawesome.js?v=62f98e65:986
+@fortawesome_react-fontawesome.js?v=62f98e65:986 Could not find icon Object
+log @ @fortawesome_react-fontawesome.js?v=62f98e65:986
+@fortawesome_react-fontawesome.js?v=62f98e65:986 Could not find icon Object
+log @ @fortawesome_react-fontawesome.js?v=62f98e65:986
+@fortawesome_react-fontawesome.js?v=62f98e65:986 Could not find icon Object
+log @ @fortawesome_react-fontawesome.js?v=62f98e65:986
+@fortawesome_react-fontawesome.js?v=62f98e65:986 Could not find icon Object
+log @ @fortawesome_react-fontawesome.js?v=62f98e65:986
+@fortawesome_react-fontawesome.js?v=62f98e65:986 Could not find icon Object
+log @ @fortawesome_react-fontawesome.js?v=62f98e65:986
+ScannerTab.tsx:221 Uncaught TypeError: Cannot read properties of undefined (reading 'toLowerCase')
+    at ScannerTab.tsx:221:97
+    at ScannerTab (ScannerTab.tsx:241:27)
+    at renderWithHooks (chunk-WERSD76P.js?v=62f98e65:11548:26)
+    at updateFunctionComponent (chunk-WERSD76P.js?v=62f98e65:14582:28)
+    at beginWork (chunk-WERSD76P.js?v=62f98e65:15924:22)
+    at HTMLUnknownElement.callCallback2 (chunk-WERSD76P.js?v=62f98e65:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-WERSD76P.js?v=62f98e65:3699:24)
+    at invokeGuardedCallback (chunk-WERSD76P.js?v=62f98e65:3733:39)
+    at beginWork$1 (chunk-WERSD76P.js?v=62f98e65:19765:15)
+    at performUnitOfWork (chunk-WERSD76P.js?v=62f98e65:19198:20)
+ScannerTab.tsx:221 Uncaught TypeError: Cannot read properties of undefined (reading 'toLowerCase')
+    at ScannerTab.tsx:221:97
+    at ScannerTab (ScannerTab.tsx:241:27)
+    at renderWithHooks (chunk-WERSD76P.js?v=62f98e65:11548:26)
+    at updateFunctionComponent (chunk-WERSD76P.js?v=62f98e65:14582:28)
+    at beginWork (chunk-WERSD76P.js?v=62f98e65:15924:22)
+    at HTMLUnknownElement.callCallback2 (chunk-WERSD76P.js?v=62f98e65:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-WERSD76P.js?v=62f98e65:3699:24)
+    at invokeGuardedCallback (chunk-WERSD76P.js?v=62f98e65:3733:39)
+    at beginWork$1 (chunk-WERSD76P.js?v=62f98e65:19765:15)
+    at performUnitOfWork (chunk-WERSD76P.js?v=62f98e65:19198:20)
+chunk-WERSD76P.js?v=62f98e65:14032 The above error occurred in the <ScannerTab> component:
+
+    at ScannerTab (https://2a67b226-ff2a-4afc-8ab5-51eea562573c-00-26s5x7mwlmql1.spock.replit.dev/src/components/ruby-tabs/ScannerTab.tsx:26:30)
+    at div
+    at https://2a67b226-ff2a-4afc-8ab5-51eea562573c-00-26s5x7mwlmql1.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PY3QULOF.js?v=62f98e65:131:13
+    at Presence (https://2a67b226-ff2a-4afc-8ab5-51eea562573c-00-26s5x7mwlmql1.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PO7C2W34.js?v=62f98e65:24:11)
+    at https://2a67b226-ff2a-4afc-8ab5-51eea562573c-00-26s5x7mwlmql1.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tabs.js?v=62f98e65:381:13
+    at _c5 (https://2a67b226-ff2a-4afc-8ab5-51eea562573c-00-26s5x7mwlmql1.spock.replit.dev/src/components/ui/tabs.tsx:72:12)
+    at div
+    at div
+    at https://2a67b226-ff2a-4afc-8ab5-51eea562573c-00-26s5x7mwlmql1.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PY3QULOF.js?v=62f98e65:131:13
+    at Provider (https://2a67b226-ff2a-4afc-8ab5-51eea562573c-00-26s5x7mwlmql1.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PY3QULOF.js?v=62f98e65:54:15)
+    at https://2a67b226-ff2a-4afc-8ab5-51eea562573c-00-26s5x7mwlmql1.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tabs.js?v=62f98e65:259:7
+    at div
+    at _c9 (https://2a67b226-ff2a-4afc-8ab5-51eea562573c-00-26s5x7mwlmql1.spock.replit.dev/src/components/ui/card.tsx:114:12)
+    at div
+    at _c (https://2a67b226-ff2a-4afc-8ab5-51eea562573c-00-26s5x7mwlmql1.spock.replit.dev/src/components/ui/card.tsx:20:11)
+    at main
+    at div
+    at RubyStation (https://2a67b226-ff2a-4afc-8ab5-51eea562573c-00-26s5x7mwlmql1.spock.replit.dev/src/components/ruby-station.tsx?t=1746812423339:29:31)
+    at main
+    at div
+    at HomePage (https://2a67b226-ff2a-4afc-8ab5-51eea562573c-00-26s5x7mwlmql1.spock.replit.dev/src/pages/home-page.tsx?t=1746812423339:35:7)
+    at Route (https://2a67b226-ff2a-4afc-8ab5-51eea562573c-00-26s5x7mwlmql1.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=62f98e65:323:16)
+    at Switch (https://2a67b226-ff2a-4afc-8ab5-51eea562573c-00-26s5x7mwlmql1.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=62f98e65:379:17)
+    at div
+    at App (https://2a67b226-ff2a-4afc-8ab5-51eea562573c-00-26s5x7mwlmql1.spock.replit.dev/src/App.tsx?t=1746812423339&v=1B9ox2f0xAhiCDvKVnhbG:25:3)
+    at Provider (https://2a67b226-ff2a-4afc-8ab5-51eea562573c-00-26s5x7mwlmql1.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PY3QULOF.js?v=62f98e65:54:15)
+    at TooltipProvider (https://2a67b226-ff2a-4afc-8ab5-51eea562573c-00-26s5x7mwlmql1.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=62f98e65:56:5)
+    at QueryClientProvider (https://2a67b226-ff2a-4afc-8ab5-51eea562573c-00-26s5x7mwlmql1.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=62f98e65:2805:3)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+logCapturedError @ chunk-WERSD76P.js?v=62f98e65:14032
+chunk-WERSD76P.js?v=62f98e65:9129 Uncaught TypeError: Cannot read properties of undefined (reading 'toLowerCase')
+    at ScannerTab.tsx:221:97
+    at ScannerTab (ScannerTab.tsx:241:27)
+    at renderWithHooks (chunk-WERSD76P.js?v=62f98e65:11548:26)
+    at updateFunctionComponent (chunk-WERSD76P.js?v=62f98e65:14582:28)
+    at beginWork (chunk-WERSD76P.js?v=62f98e65:15924:22)
+    at beginWork$1 (chunk-WERSD76P.js?v=62f98e65:19753:22)
+    at performUnitOfWork (chunk-WERSD76P.js?v=62f98e65:19198:20)
+    at workLoopSync (chunk-WERSD76P.js?v=62f98e65:19137:13)
+    at renderRootSync (chunk-WERSD76P.js?v=62f98e65:19116:15)
+    at recoverFromConcurrentError (chunk-WERSD76P.js?v=62f98e65:18736:28)
+socket.ts:42 WebSocket connection closed
+socket.ts:48 Attempting to reconnect (1/5)...
+socket.ts:22 Connecting to WebSocket at wss://2a67b226-ff2a-4afc-8ab5-51eea562573c-00-26s5x7mwlmql1.spock.replit.dev/ws
+socket.ts:27 WebSocket connection established
