@@ -69,14 +69,17 @@ export function ScannerTab({ operatorName }: ScannerTabProps) {
     // Store the current studentId to use in the query
     const currentStudentId = studentId;
     
-    // Reset the input field for next scan
+    // Reset the input field for next scan immediately to prevent UI glitches
     setStudentId("");
     
-    // Simulate scanning delay
+    // Set the scanned ID right away, but keep the scanning state for a moment
+    // to prevent the white screen issue
+    setScannedStudentId(currentStudentId);
+    
+    // Keep the loading state active briefly for visual feedback
     setTimeout(() => {
-      setScannedStudentId(currentStudentId);
       setScanning(false);
-    }, 800);
+    }, 500);
   };
 
   // Distribution mutation

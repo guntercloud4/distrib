@@ -57,7 +57,7 @@ export function DataTab({ operatorName }: DataTabProps) {
   const queryClient = useQueryClient();
   
   // Fetch all students
-  const { data: students = [], isLoading, error } = useQuery({
+  const { data: students = [] as Student[], isLoading, error } = useQuery<Student[]>({
     queryKey: ['/api/students'],
     refetchInterval: 5000
   });
@@ -66,13 +66,11 @@ export function DataTab({ operatorName }: DataTabProps) {
   const editStudentMutation = useMutation({
     mutationFn: async (data: StudentFormValues & { id: number }) => {
       const { id, ...studentData } = data;
-      return apiRequest(`/api/students/${id}`, {
-        method: 'PUT',
-        body: JSON.stringify({ 
-          ...studentData, 
-          operatorName 
-        })
-      });
+      return apiRequest(
+        'PUT',
+        `/api/students/${id}`,
+        { ...studentData, operatorName }
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/students'] });
@@ -83,13 +81,11 @@ export function DataTab({ operatorName }: DataTabProps) {
   // Add student mutation
   const addStudentMutation = useMutation({
     mutationFn: async (data: StudentFormValues) => {
-      return apiRequest('/api/students', {
-        method: 'POST',
-        body: JSON.stringify({ 
-          ...data, 
-          operatorName 
-        })
-      });
+      return apiRequest(
+        'POST',
+        '/api/students',
+        { ...data, operatorName }
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/students'] });
@@ -101,10 +97,11 @@ export function DataTab({ operatorName }: DataTabProps) {
   // Delete student mutation
   const deleteStudentMutation = useMutation({
     mutationFn: async (id: number) => {
-      return apiRequest(`/api/students/${id}`, {
-        method: 'DELETE',
-        body: JSON.stringify({ operatorName })
-      });
+      return apiRequest(
+        'DELETE',
+        `/api/students/${id}`,
+        { operatorName }
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/students'] });
@@ -161,7 +158,7 @@ export function DataTab({ operatorName }: DataTabProps) {
         signaturePackage: editingStudent.signaturePackage,
         clearCover: editingStudent.clearCover,
         photoPockets: editingStudent.photoPockets,
-        photoUrl: editingStudent.photoUrl || "",
+        photoUrl: typeof editingStudent.photoUrl === 'string' ? editingStudent.photoUrl : "",
       });
     } else if (isAddDialogOpen) {
       form.reset({
@@ -473,7 +470,7 @@ export function DataTab({ operatorName }: DataTabProps) {
                       <FormItem>
                         <FormLabel>Photo URL</FormLabel>
                         <FormControl>
-                          <Input {...field} />
+                          <Input {...field} value={field.value || ""} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -745,7 +742,7 @@ export function DataTab({ operatorName }: DataTabProps) {
                   <FormItem>
                     <FormLabel>Photo URL (optional)</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="Leave blank to use default from cdn.gunter.cloud" />
+                      <Input {...field} value={field.value || ""} placeholder="Leave blank to use default from cdn.gunter.cloud" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
