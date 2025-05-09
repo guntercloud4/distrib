@@ -13,6 +13,8 @@ import {
   InsertPayment,
   PaymentProcess
 } from "@shared/schema";
+import { db } from "./db";
+import { eq, desc, and, asc } from "drizzle-orm";
 
 // modify the interface with any CRUD methods
 // you might need
@@ -48,171 +50,140 @@ export interface IStorage {
   importStudents(students: InsertStudent[]): Promise<Student[]>;
 }
 
-export class MemStorage implements IStorage {
-  private studentsList: Map<number, Student>;
-  private actionLogsList: Map<number, ActionLog>;
-  private distributionsList: Map<number, Distribution>;
-  private paymentsList: Map<number, Payment>;
-  
-  private studentIdCounter: number;
-  private logIdCounter: number;
-  private distributionIdCounter: number;
-  private paymentIdCounter: number;
-
-  constructor() {
-    this.studentsList = new Map();
-    this.actionLogsList = new Map();
-    this.distributionsList = new Map();
-    this.paymentsList = new Map();
-    
-    this.studentIdCounter = 1;
-    this.logIdCounter = 1;
-    this.distributionIdCounter = 1;
-    this.paymentIdCounter = 1;
-  }
-
+export class DatabaseStorage implements IStorage {
   // Student operations
   async getStudents(): Promise<Student[]> {
-    return Array.from(this.studentsList.values());
+    return db.select().from(students);
   }
 
   async getStudentById(id: number): Promise<Student | undefined> {
-    return this.studentsList.get(id);
+    const result = await db.select().from(students).where(eq(students.id, id));
+    return result[0];
   }
 
   async getStudentByStudentId(studentId: string): Promise<Student | undefined> {
-    return Array.from(this.studentsList.values()).find(
-      (student) => student.studentId === studentId
-    );
+    const result = await db.select().from(students).where(eq(students.studentId, studentId));
+    return result[0];
   }
 
   async createStudent(student: InsertStudent): Promise<Student> {
-    const id = this.studentIdCounter++;
-    const now = new Date();
-    const newStudent: Student = { ...student, id, orderEnteredDate: student.orderEnteredDate || now };
-    this.studentsList.set(id, newStudent);
-    return newStudent;
+    const result = await db.insert(students).values(student).returning();
+    return result[0];
   }
 
   async updateStudent(id: number, student: Partial<InsertStudent>): Promise<Student | undefined> {
-    const existingStudent = this.studentsList.get(id);
-    if (!existingStudent) return undefined;
-    
-    const updatedStudent = { ...existingStudent, ...student };
-    this.studentsList.set(id, updatedStudent);
-    return updatedStudent;
+    const result = await db.update(students).set(student).where(eq(students.id, id)).returning();
+    return result[0];
   }
 
   async deleteStudent(id: number): Promise<boolean> {
-    return this.studentsList.delete(id);
+    const result = await db.delete(students).where(eq(students.id, id)).returning({ id: students.id });
+    return result.length > 0;
   }
   
   // Action logs operations
   async getLogs(limit?: number): Promise<ActionLog[]> {
-    const logs = Array.from(this.actionLogsList.values())
-      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
-    
-    return limit ? logs.slice(0, limit) : logs;
+    if (limit) {
+      return db.select().from(actionLogs).orderBy(desc(actionLogs.timestamp)).limit(limit);
+    }
+    return db.select().from(actionLogs).orderBy(desc(actionLogs.timestamp));
   }
 
   async getLogsByStudentId(studentId: string): Promise<ActionLog[]> {
-    return Array.from(this.actionLogsList.values())
-      .filter((log) => log.studentId === studentId)
-      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+    return db.select()
+      .from(actionLogs)
+      .where(eq(actionLogs.studentId, studentId))
+      .orderBy(desc(actionLogs.timestamp));
   }
 
   async createLog(log: InsertActionLog): Promise<ActionLog> {
-    const id = this.logIdCounter++;
-    const now = new Date();
-    const newLog: ActionLog = { ...log, id, timestamp: now };
-    this.actionLogsList.set(id, newLog);
-    return newLog;
+    const result = await db.insert(actionLogs).values(log).returning();
+    return result[0];
   }
   
   // Distribution operations
   async getDistributions(limit?: number): Promise<Distribution[]> {
-    const distributions = Array.from(this.distributionsList.values())
-      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
-    
-    return limit ? distributions.slice(0, limit) : distributions;
+    if (limit) {
+      return db.select().from(distributions).orderBy(desc(distributions.timestamp)).limit(limit);
+    }
+    return db.select().from(distributions).orderBy(desc(distributions.timestamp));
   }
 
   async getDistributionsByStudentId(studentId: string): Promise<Distribution[]> {
-    return Array.from(this.distributionsList.values())
-      .filter((distribution) => distribution.studentId === studentId)
-      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+    return db.select()
+      .from(distributions)
+      .where(eq(distributions.studentId, studentId))
+      .orderBy(desc(distributions.timestamp));
   }
 
   async createDistribution(distribution: InsertDistribution): Promise<Distribution> {
-    const id = this.distributionIdCounter++;
-    const now = new Date();
-    const newDistribution: Distribution = { 
-      ...distribution, 
-      id, 
-      timestamp: now,
+    const result = await db.insert(distributions).values({
+      ...distribution,
       verified: false,
-      verifiedBy: null,
-      verifiedAt: null
-    };
-    this.distributionsList.set(id, newDistribution);
-    return newDistribution;
+    }).returning();
+    return result[0];
   }
 
   async verifyDistribution(id: number, verifiedBy: string): Promise<Distribution | undefined> {
-    const distribution = this.distributionsList.get(id);
-    if (!distribution) return undefined;
-    
     const now = new Date();
-    const verifiedDistribution: Distribution = {
-      ...distribution,
-      verified: true,
-      verifiedBy,
-      verifiedAt: now
-    };
+    const result = await db.update(distributions)
+      .set({ 
+        verified: true,
+        verifiedBy,
+        verifiedAt: now
+      })
+      .where(eq(distributions.id, id))
+      .returning();
     
-    this.distributionsList.set(id, verifiedDistribution);
-    return verifiedDistribution;
+    return result[0];
   }
   
   // Payment operations
   async getPayments(limit?: number): Promise<Payment[]> {
-    const payments = Array.from(this.paymentsList.values())
-      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
-    
-    return limit ? payments.slice(0, limit) : payments;
+    if (limit) {
+      return db.select().from(payments).orderBy(desc(payments.timestamp)).limit(limit);
+    }
+    return db.select().from(payments).orderBy(desc(payments.timestamp));
   }
 
   async getPaymentsByStudentId(studentId: string): Promise<Payment[]> {
-    return Array.from(this.paymentsList.values())
-      .filter((payment) => payment.studentId === studentId)
-      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+    return db.select()
+      .from(payments)
+      .where(eq(payments.studentId, studentId))
+      .orderBy(desc(payments.timestamp));
   }
 
   async createPayment(payment: InsertPayment): Promise<Payment> {
-    const id = this.paymentIdCounter++;
-    const now = new Date();
-    const newPayment: Payment = { ...payment, id, timestamp: now };
-    this.paymentsList.set(id, newPayment);
-    
-    // Update student balance
-    const student = await this.getStudentByStudentId(payment.studentId);
-    if (student) {
-      const balance = parseFloat(student.balanceDue.toString());
-      const paid = parseFloat(payment.amountPaid.toString());
+    // Start a transaction
+    return db.transaction(async (tx) => {
+      // Insert the payment
+      const [newPayment] = await tx.insert(payments).values(payment).returning();
       
-      if (balance - paid <= 0) {
-        await this.updateStudent(student.id, {
-          balanceDue: 0,
-          paymentStatus: "Paid"
-        });
-      } else {
-        await this.updateStudent(student.id, {
-          balanceDue: balance - paid,
-        });
+      // Update student balance
+      const [student] = await tx.select().from(students).where(eq(students.studentId, payment.studentId));
+      
+      if (student) {
+        const balance = parseFloat(student.balanceDue.toString());
+        const paid = parseFloat(payment.amountPaid.toString());
+        
+        if (balance - paid <= 0) {
+          await tx.update(students)
+            .set({
+              balanceDue: 0,
+              paymentStatus: "Paid"
+            })
+            .where(eq(students.id, student.id));
+        } else {
+          await tx.update(students)
+            .set({
+              balanceDue: balance - paid
+            })
+            .where(eq(students.id, student.id));
+        }
       }
-    }
-    
-    return newPayment;
+      
+      return newPayment;
+    });
   }
   
   // Processing functions
@@ -293,23 +264,37 @@ export class MemStorage implements IStorage {
   async importStudents(students: InsertStudent[]): Promise<Student[]> {
     const imported: Student[] = [];
     
-    for (const student of students) {
-      // Check if student already exists
-      const existing = await this.getStudentByStudentId(student.studentId);
-      
-      if (existing) {
-        // Update existing student
-        const updated = await this.updateStudent(existing.id, student);
-        if (updated) imported.push(updated);
-      } else {
-        // Create new student
-        const created = await this.createStudent(student);
-        imported.push(created);
+    // Use transaction for batch processing
+    await db.transaction(async (tx) => {
+      for (const student of students) {
+        // Check if student already exists
+        const existingResult = await tx.select()
+          .from(students)
+          .where(eq(students.studentId, student.studentId));
+        
+        const existing = existingResult[0];
+        
+        if (existing) {
+          // Update existing student
+          const [updated] = await tx.update(students)
+            .set(student)
+            .where(eq(students.id, existing.id))
+            .returning();
+          
+          if (updated) imported.push(updated);
+        } else {
+          // Create new student
+          const [created] = await tx.insert(students)
+            .values(student)
+            .returning();
+          
+          imported.push(created);
+        }
       }
-    }
+    });
     
     return imported;
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
