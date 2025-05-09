@@ -6,7 +6,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Header } from "./header";
 import { Footer } from "./footer";
 import { DatabaseTab } from "./ruby-tabs/DatabaseTab";
-import { ScannerTab } from "./ruby-tabs/ScannerTab";
+import { ScannerTab } from "./ruby-tabs/ScannerTab-fixed";
 import { PosTab } from "./ruby-tabs/PosTab";
 import { CheckersTab } from "./ruby-tabs/CheckersTab";
 import { FreeBookTab } from "./ruby-tabs/FreeBookTab";
@@ -47,7 +47,7 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
                   <span className="hidden md:inline">Database</span>
                 </TabsTrigger>
                 <TabsTrigger value="data">
-                  <FontAwesomeIcon icon="database" className="mr-2" />
+                  <FontAwesomeIcon icon="storage" className="mr-2" />
                   <span className="hidden md:inline font-normal">Data</span>
                 </TabsTrigger>
                 <TabsTrigger value="scanner">

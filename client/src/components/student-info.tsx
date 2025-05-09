@@ -1,5 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Student, Distribution } from "@shared/schema";
 import { formatCurrency, formatDateTime, getPaymentStatusColor } from "@/lib/utils";
 
@@ -41,9 +42,20 @@ export function StudentInfo({
     <Card className="overflow-hidden mb-6">
       <CardContent className="p-6 grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="md:col-span-1">
-          {/* Student photo placeholder - would be replaced with actual photo */}
-          <div className="bg-neutral-200 rounded-lg overflow-hidden h-48 flex items-center justify-center">
-            <span className="material-icons text-neutral-500 text-5xl">person</span>
+          {/* Student photo or placeholder */}
+          <div className="bg-neutral-100 rounded-lg overflow-hidden h-48 flex items-center justify-center">
+            {student.photoUrl ? (
+              <img 
+                src={student.photoUrl} 
+                alt={`${student.firstName} ${student.lastName}`}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center text-neutral-500">
+                <FontAwesomeIcon icon="user-circle" className="text-5xl mb-2" />
+                <span className="text-sm">No photo available</span>
+              </div>
+            )}
           </div>
         </div>
         
@@ -59,7 +71,7 @@ export function StudentInfo({
               <div>
                 <Badge className={statusClass}>
                   {showVerificationStatus && !isVerified && (
-                    <span className="material-icons text-xs mr-1">schedule</span>
+                    <FontAwesomeIcon icon="clock" className="text-xs mr-1" />
                   )}
                   {statusText}
                 </Badge>

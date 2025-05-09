@@ -47,7 +47,8 @@ import {
   faFileExport,
   faTable,
   faDatabase as faStorage,
-  faSpinner as faLoading
+  faSpinner as faLoading,
+  faClock
 } from '@fortawesome/free-solid-svg-icons';
 
 // Add all icons to the library so you can use it in your page
@@ -99,5 +100,6 @@ library.add(
   faFileExport,
   faTable,
   faStorage,
-  faLoading
+  faLoading,
+  faClock
 );
