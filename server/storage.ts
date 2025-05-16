@@ -216,7 +216,8 @@ export class DatabaseStorage implements IStorage {
           await tx.update(students)
             .set({
               balanceDue: "0",
-              paymentStatus: "Confirmed"
+              paymentStatus: "PAID",
+              distributionStatus: "Confirmed"
             })
             .where(eq(students.id, student.id));
         } else {
