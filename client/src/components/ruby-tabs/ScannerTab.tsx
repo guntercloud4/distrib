@@ -69,12 +69,11 @@ export function ScannerTab({ operatorName }: ScannerTabProps) {
 
   // Distribute mutation
   const distributeMutation = useMutation({
-    mutationFn: async (studentId: number) => {
+    mutationFn: async (studentId: string) => {
       const res = await apiRequest('POST', '/api/distributions', {
-        studentId: studentId,
-        distributedBy: operatorName,
+        studentId: studentId.toString(),
+        operatorName: operatorName,
         timestamp: new Date(),
-        verified: false
       });
       return res.json();
     },
