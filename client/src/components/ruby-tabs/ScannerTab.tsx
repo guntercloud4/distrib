@@ -264,7 +264,7 @@ export function ScannerTab({ operatorName }: ScannerTabProps) {
                   {(() => {
                     // Check if student has any distributions at all
                     if (!Array.isArray(distribution) || distribution.length === 0) {
-                      // No distribution records - allow distribution (Not Distributed status)
+                      // No distribution records - allow distribution (Pending Distribution status)
                       return (
                         <Button 
                           onClick={handleDistribute} 

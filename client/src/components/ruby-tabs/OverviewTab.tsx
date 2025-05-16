@@ -266,7 +266,7 @@ export function OverviewTab() {
                 <h3 className="text-xl font-bold text-neutral-900">
                   {stats.studentsWithYearbooks - stats.distributedYearbooks}
                 </h3>
-                <p className="text-neutral-600">Yearbooks Not Distributed</p>
+                <p className="text-neutral-600">Pending Distribution</p>
               </div>
             </div>
             

@@ -537,7 +537,7 @@ export function DataTab() {
                           <TableCell>
                             {!distributionStatus.distributed ? (
                               <span className="py-1 px-2 rounded-full text-xs bg-neutral-100 text-neutral-800">
-                                Not Distributed
+                                Pending Distribution
                               </span>
                             ) : distributionStatus.verified ? (
                               <span className="py-1 px-2 rounded-full text-xs bg-green-100 text-green-800">
