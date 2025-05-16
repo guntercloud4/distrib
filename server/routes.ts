@@ -517,20 +517,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         operatorName,
       });
       
+      // Immediately verify the distribution to mark as "Confirmed"
+      const verifiedDistribution = await storage.verifyDistribution(distribution.id, operatorName);
+      
       // Log the action
       const actionLog = await storage.createLog({
         studentId,
         action: "FREE_BOOK",
-        details: { student: updatedStudent, distribution },
+        details: { student: updatedStudent, distribution: verifiedDistribution },
         stationName: "Ruby Station",
         operatorName,
       });
       
-      // Broadcast free book distribution event
-      broadcastMessage({
-        type: 'NEW_DISTRIBUTION',
-        data: distribution
-      });
+      // Only broadcast if verification succeeded
+      if (verifiedDistribution) {
+        // Broadcast as verified distribution event
+        broadcastMessage({
+          type: 'VERIFY_DISTRIBUTION',
+          data: verifiedDistribution as Distribution
+        });
+      } else {
+        // Fallback to broadcast as regular distribution if verification failed
+        broadcastMessage({
+          type: 'NEW_DISTRIBUTION',
+          data: distribution
+        });
+      }
       
       // Also broadcast log event
       broadcastMessage({
@@ -540,7 +552,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json({
         student: updatedStudent,
-        distribution,
+        distribution: verifiedDistribution,
       });
     } catch (error) {
       res.status(500).json({ error: "Failed to issue free book" });
