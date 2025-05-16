@@ -114,6 +114,7 @@ export class DatabaseStorage implements IStorage {
       if (current) {
         const firstName = student.firstName || current.firstName;
         const lastName = student.lastName || current.lastName;
+        // Format the URL properly with Last_First
         updateData.photoUrl = `https://cdn.gunter.cloud/faces/${lastName}_${firstName}.jpg`;
       }
     }

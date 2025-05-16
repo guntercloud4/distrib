@@ -146,7 +146,7 @@ export function ScannerTab({ operatorName }: ScannerTabProps) {
   // Handle distribution
   const handleDistribute = () => {
     if (!student) return;
-    distributeMutation.mutate(student.id);
+    distributeMutation.mutate(student.studentId);
   };
 
   // Handle modal close
