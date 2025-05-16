@@ -9,7 +9,13 @@ import { Student } from "@shared/schema";
 import { formatCurrency, parseCSV } from "@/lib/utils";
 import { useWsLogs } from "@/hooks/use-ws-logs";
 import { socketProvider } from "@/lib/socket";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
@@ -35,27 +41,27 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
     orderType: "",
     orderNumber: "",
     balanceDue: "0",
-    paymentStatus: "Unpaid"
+    paymentStatus: "Unpaid",
   });
-  
+
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { formattedLogs, isConnected } = useWsLogs();
 
   // Fetch all students
-  const { 
+  const {
     data: students,
     isLoading: studentsLoading,
-    refetch: refetchStudents
+    refetch: refetchStudents,
   } = useQuery<Student[]>({
-    queryKey: ['/api/students'],
-    staleTime: 30000 // 30 seconds
+    queryKey: ["/api/students"],
+    staleTime: 30000, // 30 seconds
   });
 
   // Filter students based on search term
-  const filteredStudents = students?.filter(student => {
+  const filteredStudents = students?.filter((student) => {
     if (!searchTerm) return true;
-    
+
     const term = searchTerm.toLowerCase();
     return (
       student.studentId.toLowerCase().includes(term) ||
@@ -67,8 +73,12 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
 
   // CSV upload mutation
   const csvMutation = useMutation({
-    mutationFn: async (data: { mappings: Record<string, string>, csvData: any[], operatorName: string }) => {
-      const res = await apiRequest('POST', '/api/students/import', data);
+    mutationFn: async (data: {
+      mappings: Record<string, string>;
+      csvData: any[];
+      operatorName: string;
+    }) => {
+      const res = await apiRequest("POST", "/api/students/import", data);
       return await res.json();
     },
     onSuccess: (data) => {
@@ -76,27 +86,27 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
         title: "CSV Import Successful",
         description: `Successfully imported ${data.imported} students.`,
       });
-      
+
       // Log the action via WebSocket
       socketProvider.send({
-        type: 'LOG_ACTION',
+        type: "LOG_ACTION",
         data: {
           id: Date.now(),
           timestamp: new Date(),
           studentId: null,
-          action: 'IMPORT_STUDENTS',
+          action: "IMPORT_STUDENTS",
           details: { count: data.imported },
-          stationName: 'Ruby Station',
-          operatorName
-        }
+          stationName: "Ruby Station",
+          operatorName,
+        },
       });
-      
+
       // Close dialog and reset form
       setShowCsvDialog(false);
       setCsvContent("");
       setCsvMappings({});
       setCsvHeaders([]);
-      
+
       // Refetch students to update the table
       refetchStudents();
     },
@@ -104,15 +114,15 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
       toast({
         title: "CSV Import Failed",
         description: error.message,
-        variant: "destructive"
+        variant: "destructive",
       });
-    }
+    },
   });
 
   // Add student mutation
   const addStudentMutation = useMutation({
     mutationFn: async (studentData: typeof newStudent) => {
-      const res = await apiRequest('POST', '/api/students', studentData);
+      const res = await apiRequest("POST", "/api/students", studentData);
       return await res.json();
     },
     onSuccess: (data) => {
@@ -120,7 +130,7 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
         title: "Student Added",
         description: `Successfully added ${data.firstName} ${data.lastName} to the database.`,
       });
-      
+
       // Close dialog and reset form
       setShowAddStudentDialog(false);
       setNewStudent({
@@ -130,9 +140,9 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
         orderType: "",
         orderNumber: "",
         balanceDue: "0",
-        paymentStatus: "Unpaid"
+        paymentStatus: "Unpaid",
       });
-      
+
       // Refetch students to update the table
       refetchStudents();
     },
@@ -140,25 +150,40 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
       toast({
         title: "Failed to Add Student",
         description: error.message,
-        variant: "destructive"
+        variant: "destructive",
       });
-    }
+    },
   });
 
   // Free book mutation
   const freeBookMutation = useMutation({
-    mutationFn: async ({ studentName, operatorName }: { studentName: string, operatorName: string }) => {
+    mutationFn: async ({
+      studentName,
+      operatorName,
+    }: {
+      studentName: string;
+      operatorName: string;
+    }) => {
       // Find student by name
-      const student = students?.find(s => 
-        `${s.firstName} ${s.lastName}`.toLowerCase().includes(studentName.toLowerCase()) ||
-        `${s.lastName} ${s.firstName}`.toLowerCase().includes(studentName.toLowerCase())
+      const student = students?.find(
+        (s) =>
+          `${s.firstName} ${s.lastName}`
+            .toLowerCase()
+            .includes(studentName.toLowerCase()) ||
+          `${s.lastName} ${s.firstName}`
+            .toLowerCase()
+            .includes(studentName.toLowerCase()),
       );
-      
+
       if (!student) {
         throw new Error(`No student found with name: ${studentName}`);
       }
-      
-      const res = await apiRequest('POST', `/api/students/${student.studentId}/free-book`, { operatorName });
+
+      const res = await apiRequest(
+        "POST",
+        `/api/students/${student.studentId}/free-book`,
+        { operatorName },
+      );
       return await res.json();
     },
     onSuccess: (data) => {
@@ -166,11 +191,11 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
         title: "Free Book Issued",
         description: `Successfully issued a free book to ${data.student.firstName} ${data.student.lastName}.`,
       });
-      
+
       // Close dialog and reset form
       setShowFreeBookDialog(false);
       setFreeBookStudentName("");
-      
+
       // Refetch students to update the table
       refetchStudents();
     },
@@ -178,21 +203,21 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
       toast({
         title: "Free Book Issue Failed",
         description: error.message,
-        variant: "destructive"
+        variant: "destructive",
       });
-    }
+    },
   });
 
   // Handle CSV file upload
   const handleCsvFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    
+
     const reader = new FileReader();
     reader.onload = (event) => {
       const csvText = event.target?.result as string;
       setCsvContent(csvText);
-      
+
       // Parse the CSV to get headers
       const parsedData = parseCSV(csvText);
       if (parsedData.length > 0) {
@@ -204,9 +229,9 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
 
   // Handle CSV mapping selection
   const handleMappingSelect = (field: string, header: string) => {
-    setCsvMappings(prev => ({
+    setCsvMappings((prev) => ({
       ...prev,
-      [field]: header
+      [field]: header,
     }));
   };
 
@@ -216,38 +241,43 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
       toast({
         title: "Mapping Required",
         description: "Please map all required fields before importing.",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
-    
+
     const parsedData = parseCSV(csvContent);
     csvMutation.mutate({
       mappings: csvMappings,
       csvData: parsedData,
-      operatorName
+      operatorName,
     });
   };
 
   // Handle add student form changes
   const handleNewStudentChange = (field: string, value: string) => {
-    setNewStudent(prev => ({
+    setNewStudent((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
   };
 
   // Add a new student
   const addStudent = () => {
-    if (!newStudent.studentId || !newStudent.firstName || !newStudent.lastName) {
+    if (
+      !newStudent.studentId ||
+      !newStudent.firstName ||
+      !newStudent.lastName
+    ) {
       toast({
         title: "Missing Information",
-        description: "Please provide Student ID, First Name, and Last Name at minimum.",
-        variant: "destructive"
+        description:
+          "Please provide Student ID, First Name, and Last Name at minimum.",
+        variant: "destructive",
       });
       return;
     }
-    
+
     addStudentMutation.mutate(newStudent);
   };
 
@@ -257,14 +287,14 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
       toast({
         title: "Student Name Required",
         description: "Please enter a student name to issue a free book.",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
-    
+
     freeBookMutation.mutate({
       studentName: freeBookStudentName,
-      operatorName
+      operatorName,
     });
   };
 
@@ -281,9 +311,11 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 fade-in">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-semibold text-neutral-800">Ruby Station (Admin Hub)</h2>
-        <Button 
-          variant="outline" 
+        <h2 className="text-xl font-semibold text-neutral-800">
+          Ruby Station (Admin Hub)
+        </h2>
+        <Button
+          variant="outline"
           onClick={onLogout}
           className="text-neutral-600 hover:text-neutral-800"
         >
@@ -291,17 +323,22 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
           Exit Station
         </Button>
       </div>
-      
+
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <div className="lg:col-span-3">
           <Card className="mb-6">
             <CardContent className="p-6">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-medium text-neutral-800">Student Database</h3>
+                <h3 className="text-lg font-medium text-neutral-800">
+                  Student Database
+                </h3>
                 <div className="flex space-x-2">
                   <Dialog open={showCsvDialog} onOpenChange={setShowCsvDialog}>
                     <DialogTrigger asChild>
-                      <Button variant="outline" className="px-3 py-1 h-9 text-sm text-primary">
+                      <Button
+                        variant="outline"
+                        className="px-3 py-1 h-9 text-sm text-primary"
+                      >
                         <FontAwesomeIcon icon="file-upload" className="mr-2" />
                         Import CSV
                       </Button>
@@ -316,9 +353,9 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
                             <label className="block text-sm font-medium text-neutral-700 mb-1">
                               Select CSV File
                             </label>
-                            <Input 
-                              type="file" 
-                              accept=".csv" 
+                            <Input
+                              type="file"
+                              accept=".csv"
                               onChange={handleCsvFileUpload}
                               className="w-full"
                             />
@@ -330,37 +367,85 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
                             </h4>
                             <div className="space-y-4 max-h-80 overflow-y-auto">
                               <div className="grid grid-cols-2 gap-2">
-                                <div className="text-sm font-medium text-neutral-700">Student Field</div>
-                                <div className="text-sm font-medium text-neutral-700">CSV Header</div>
-                                
+                                <div className="text-sm font-medium text-neutral-700">
+                                  Student Field
+                                </div>
+                                <div className="text-sm font-medium text-neutral-700">
+                                  CSV Header
+                                </div>
+
                                 {[
-                                  { key: "studentIdField", label: "Student ID" },
+                                  {
+                                    key: "studentIdField",
+                                    label: "Student ID",
+                                  },
                                   { key: "lastNameField", label: "Last Name" },
-                                  { key: "firstNameField", label: "First Name" },
-                                  { key: "orderTypeField", label: "Order Type" },
-                                  { key: "orderNumberField", label: "Order Number" },
-                                  { key: "balanceDueField", label: "Balance Due" },
-                                  { key: "paymentStatusField", label: "Payment Status" },
+                                  {
+                                    key: "firstNameField",
+                                    label: "First Name",
+                                  },
+                                  {
+                                    key: "orderTypeField",
+                                    label: "Order Type",
+                                  },
+                                  {
+                                    key: "orderNumberField",
+                                    label: "Order Number",
+                                  },
+                                  {
+                                    key: "balanceDueField",
+                                    label: "Balance Due",
+                                  },
+                                  {
+                                    key: "paymentStatusField",
+                                    label: "Payment Status",
+                                  },
                                   { key: "yearbookField", label: "Yearbook" },
-                                  { key: "personalizationField", label: "Personalization" },
-                                  { key: "signaturePackageField", label: "Signature Package" },
-                                  { key: "clearCoverField", label: "Clear Cover" },
-                                  { key: "photoPocketsField", label: "Photo Pockets" },
-                                ].map(field => (
+                                  {
+                                    key: "personalizationField",
+                                    label: "Personalization",
+                                  },
+                                  {
+                                    key: "signaturePackageField",
+                                    label: "Signature Package",
+                                  },
+                                  {
+                                    key: "clearCoverField",
+                                    label: "Clear Cover",
+                                  },
+                                  {
+                                    key: "photoPocketsField",
+                                    label: "Photo Pockets",
+                                  },
+                                ].map((field) => (
                                   <Fragment key={field.key}>
                                     <div className="text-sm text-neutral-600">
                                       {field.label}
-                                      {field.key.includes("Field") && !field.key.includes("yearbook") && !field.key.includes("personalization") && !field.key.includes("signature") && !field.key.includes("clear") && !field.key.includes("photo") && (
-                                        <span className="text-red-500">*</span>
-                                      )}
+                                      {field.key.includes("Field") &&
+                                        !field.key.includes("yearbook") &&
+                                        !field.key.includes(
+                                          "personalization",
+                                        ) &&
+                                        !field.key.includes("signature") &&
+                                        !field.key.includes("clear") &&
+                                        !field.key.includes("photo") && (
+                                          <span className="text-red-500">
+                                            *
+                                          </span>
+                                        )}
                                     </div>
-                                    <select 
+                                    <select
                                       className="w-full text-sm p-1 border border-neutral-300 rounded"
                                       value={csvMappings[field.key] || ""}
-                                      onChange={(e) => handleMappingSelect(field.key, e.target.value)}
+                                      onChange={(e) =>
+                                        handleMappingSelect(
+                                          field.key,
+                                          e.target.value,
+                                        )
+                                      }
                                     >
                                       <option value="">Select header...</option>
-                                      {csvHeaders.map(header => (
+                                      {csvHeaders.map((header) => (
                                         <option key={header} value={header}>
                                           {header}
                                         </option>
@@ -370,11 +455,11 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
                                 ))}
                               </div>
                             </div>
-                            
+
                             <div className="text-xs text-neutral-500 mt-4">
                               * Required fields
                             </div>
-                            
+
                             <div className="flex justify-end space-x-2 mt-4">
                               <Button
                                 variant="outline"
@@ -392,7 +477,10 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
                               >
                                 {csvMutation.isPending ? (
                                   <>
-                                    <FontAwesomeIcon icon="sync" className="mr-2 animate-spin" />
+                                    <FontAwesomeIcon
+                                      icon="sync"
+                                      className="mr-2 animate-spin"
+                                    />
                                     Importing...
                                   </>
                                 ) : (
@@ -405,7 +493,7 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
                       </div>
                     </DialogContent>
                   </Dialog>
-                  
+
                   <div className="relative">
                     <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-neutral-500">
                       <FontAwesomeIcon icon="search" />
@@ -420,63 +508,126 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
                   </div>
                 </div>
               </div>
-              
-              <div className="overflow-hidden overflow-x-auto" style={{ maxHeight: "400px" }}>
+
+              <div
+                className="overflow-hidden overflow-x-auto"
+                style={{ maxHeight: "400px" }}
+              >
                 <table className="min-w-full divide-y divide-neutral-200">
                   <thead>
                     <tr>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">ID</th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">Last Name</th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">First Name</th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">Order Date</th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">Balance</th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">Status</th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">Actions</th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider"
+                      >
+                        ID
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider"
+                      >
+                        Last Name
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider"
+                      >
+                        First Name
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider"
+                      >
+                        Order Date
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider"
+                      >
+                        Balance
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider"
+                      >
+                        Status
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider"
+                      >
+                        Actions
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-neutral-200">
                     {studentsLoading ? (
                       <tr>
-                        <td colSpan={7} className="px-6 py-4 text-center text-sm text-neutral-500">
-                          <FontAwesomeIcon icon="sync" className="animate-spin mr-2" />
+                        <td
+                          colSpan={7}
+                          className="px-6 py-4 text-center text-sm text-neutral-500"
+                        >
+                          <FontAwesomeIcon
+                            icon="sync"
+                            className="animate-spin mr-2"
+                          />
                           Loading students...
                         </td>
                       </tr>
                     ) : filteredStudents && filteredStudents.length > 0 ? (
                       filteredStudents.map((student) => (
                         <tr key={student.id}>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-500">{student.studentId}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-neutral-800">{student.lastName}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-600">{student.firstName}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-600">
-                            {new Date(student.orderEnteredDate).toLocaleDateString()}
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-500">
+                            {student.studentId}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-neutral-800">
+                            {student.lastName}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-600">
-                            {formatCurrency(parseFloat(student.balanceDue.toString()))}
+                            {student.firstName}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-600">
+                            {new Date(
+                              student.orderEnteredDate,
+                            ).toLocaleDateString()}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-600">
+                            {formatCurrency(
+                              parseFloat(student.balanceDue.toString()),
+                            )}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <Badge
                               variant="secondary"
                               className={`
-                                ${student.paymentStatus.toLowerCase() === 'paid' ? 'bg-green-100 text-green-800' : ''}
-                                ${student.paymentStatus.toLowerCase() === 'unpaid' ? 'bg-yellow-100 text-yellow-800' : ''}
-                                ${student.paymentStatus.toLowerCase() === 'free' ? 'bg-blue-100 text-blue-800' : ''}
+                                ${student.paymentStatus.toLowerCase() === "paid" ? "bg-green-100 text-green-800" : ""}
+                                ${student.paymentStatus.toLowerCase() === "unpaid" ? "bg-yellow-100 text-yellow-800" : ""}
+                                ${student.paymentStatus.toLowerCase() === "free" ? "bg-blue-100 text-blue-800" : ""}
                               `}
                             >
                               {student.paymentStatus}
                             </Badge>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-600">
-                            <Button variant="link" className="p-0 h-auto text-primary">
-                              <FontAwesomeIcon icon="edit" className="mr-1" /> Edit
+                            <Button
+                              variant="link"
+                              className="p-0 h-auto text-primary"
+                            >
+                              <FontAwesomeIcon icon="edit" className="mr-1" />{" "}
+                              Edit
                             </Button>
                           </td>
                         </tr>
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={7} className="px-6 py-4 text-center text-sm text-neutral-500">
-                          {searchTerm ? "No students match your search." : "No students found in the database."}
+                        <td
+                          colSpan={7}
+                          className="px-6 py-4 text-center text-sm text-neutral-500"
+                        >
+                          {searchTerm
+                            ? "No students match your search."
+                            : "No students found in the database."}
                         </td>
                       </tr>
                     )}
@@ -485,18 +636,27 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
               </div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardContent className="p-6">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-medium text-neutral-800">Quick Actions</h3>
+                <h3 className="text-lg font-medium text-neutral-800">
+                  Quick Actions
+                </h3>
               </div>
-              
+
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="bg-neutral-50 p-4 rounded-lg">
-                  <h4 className="text-sm font-medium text-neutral-800 mb-2">Add Student</h4>
-                  <p className="text-xs text-neutral-600 mb-3">Manually add a new student to the database</p>
-                  <Dialog open={showAddStudentDialog} onOpenChange={setShowAddStudentDialog}>
+                  <h4 className="text-sm font-medium text-neutral-800 mb-2">
+                    Add Student
+                  </h4>
+                  <p className="text-xs text-neutral-600 mb-3">
+                    Manually add a new student to the database
+                  </p>
+                  <Dialog
+                    open={showAddStudentDialog}
+                    onOpenChange={setShowAddStudentDialog}
+                  >
                     <DialogTrigger asChild>
                       <Button
                         size="sm"
@@ -518,7 +678,12 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
                             </label>
                             <Input
                               value={newStudent.studentId}
-                              onChange={(e) => handleNewStudentChange('studentId', e.target.value)}
+                              onChange={(e) =>
+                                handleNewStudentChange(
+                                  "studentId",
+                                  e.target.value,
+                                )
+                              }
                               placeholder="Enter student ID"
                               className="w-full"
                             />
@@ -526,22 +691,34 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
                           <div className="grid grid-cols-2 gap-4">
                             <div>
                               <label className="block text-sm font-medium text-neutral-700 mb-1">
-                                First Name <span className="text-red-500">*</span>
+                                First Name{" "}
+                                <span className="text-red-500">*</span>
                               </label>
                               <Input
                                 value={newStudent.firstName}
-                                onChange={(e) => handleNewStudentChange('firstName', e.target.value)}
+                                onChange={(e) =>
+                                  handleNewStudentChange(
+                                    "firstName",
+                                    e.target.value,
+                                  )
+                                }
                                 placeholder="First name"
                                 className="w-full"
                               />
                             </div>
                             <div>
                               <label className="block text-sm font-medium text-neutral-700 mb-1">
-                                Last Name <span className="text-red-500">*</span>
+                                Last Name{" "}
+                                <span className="text-red-500">*</span>
                               </label>
                               <Input
                                 value={newStudent.lastName}
-                                onChange={(e) => handleNewStudentChange('lastName', e.target.value)}
+                                onChange={(e) =>
+                                  handleNewStudentChange(
+                                    "lastName",
+                                    e.target.value,
+                                  )
+                                }
                                 placeholder="Last name"
                                 className="w-full"
                               />
@@ -554,7 +731,12 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
                               </label>
                               <Input
                                 value={newStudent.orderType}
-                                onChange={(e) => handleNewStudentChange('orderType', e.target.value)}
+                                onChange={(e) =>
+                                  handleNewStudentChange(
+                                    "orderType",
+                                    e.target.value,
+                                  )
+                                }
                                 placeholder="Order type"
                                 className="w-full"
                               />
@@ -565,7 +747,12 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
                               </label>
                               <Input
                                 value={newStudent.orderNumber}
-                                onChange={(e) => handleNewStudentChange('orderNumber', e.target.value)}
+                                onChange={(e) =>
+                                  handleNewStudentChange(
+                                    "orderNumber",
+                                    e.target.value,
+                                  )
+                                }
                                 placeholder="Order number"
                                 className="w-full"
                               />
@@ -581,7 +768,12 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
                                 min="0"
                                 step="0.01"
                                 value={newStudent.balanceDue}
-                                onChange={(e) => handleNewStudentChange('balanceDue', e.target.value)}
+                                onChange={(e) =>
+                                  handleNewStudentChange(
+                                    "balanceDue",
+                                    e.target.value,
+                                  )
+                                }
                                 placeholder="0.00"
                                 className="w-full"
                               />
@@ -592,17 +784,22 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
                               </label>
                               <select
                                 value={newStudent.paymentStatus}
-                                onChange={(e) => handleNewStudentChange('paymentStatus', e.target.value)}
+                                onChange={(e) =>
+                                  handleNewStudentChange(
+                                    "paymentStatus",
+                                    e.target.value,
+                                  )
+                                }
                                 className="w-full rounded-md border border-neutral-300 p-2 text-sm"
                               >
-                                <option value="Unpaid">Unpaid</option>
-                                <option value="Paid">Paid</option>
-                                <option value="Free">Free</option>
+                                <option value="Unpaid">UNPAID</option>
+                                <option value="Paid">PAID</option>
+                                <option value="Free">FREE</option>
                               </select>
                             </div>
                           </div>
                         </div>
-                        
+
                         <div className="flex justify-end space-x-2 mt-6">
                           <Button
                             variant="outline"
@@ -616,7 +813,10 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
                           >
                             {addStudentMutation.isPending ? (
                               <>
-                                <FontAwesomeIcon icon="sync" className="mr-2 animate-spin" />
+                                <FontAwesomeIcon
+                                  icon="sync"
+                                  className="mr-2 animate-spin"
+                                />
                                 Adding...
                               </>
                             ) : (
@@ -628,11 +828,18 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
                     </DialogContent>
                   </Dialog>
                 </div>
-                
+
                 <div className="bg-neutral-50 p-4 rounded-lg">
-                  <h4 className="text-sm font-medium text-neutral-800 mb-2">Issue Free Book</h4>
-                  <p className="text-xs text-neutral-600 mb-3">Record a complimentary yearbook distribution</p>
-                  <Dialog open={showFreeBookDialog} onOpenChange={setShowFreeBookDialog}>
+                  <h4 className="text-sm font-medium text-neutral-800 mb-2">
+                    Issue Free Book
+                  </h4>
+                  <p className="text-xs text-neutral-600 mb-3">
+                    Record a complimentary yearbook distribution
+                  </p>
+                  <Dialog
+                    open={showFreeBookDialog}
+                    onOpenChange={setShowFreeBookDialog}
+                  >
                     <DialogTrigger asChild>
                       <Button
                         size="sm"
@@ -653,7 +860,9 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
                           </label>
                           <Input
                             value={freeBookStudentName}
-                            onChange={(e) => setFreeBookStudentName(e.target.value)}
+                            onChange={(e) =>
+                              setFreeBookStudentName(e.target.value)
+                            }
                             placeholder="Enter student name"
                             className="w-full"
                           />
@@ -671,7 +880,10 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
                           >
                             {freeBookMutation.isPending ? (
                               <>
-                                <FontAwesomeIcon icon="sync" className="mr-2 animate-spin" />
+                                <FontAwesomeIcon
+                                  icon="sync"
+                                  className="mr-2 animate-spin"
+                                />
                                 Processing...
                               </>
                             ) : (
@@ -683,10 +895,14 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
                     </DialogContent>
                   </Dialog>
                 </div>
-                
+
                 <div className="bg-neutral-50 p-4 rounded-lg">
-                  <h4 className="text-sm font-medium text-neutral-800 mb-2">Backup Database</h4>
-                  <p className="text-xs text-neutral-600 mb-3">Create a backup of current database</p>
+                  <h4 className="text-sm font-medium text-neutral-800 mb-2">
+                    Backup Database
+                  </h4>
+                  <p className="text-xs text-neutral-600 mb-3">
+                    Create a backup of current database
+                  </p>
                   <Button
                     size="sm"
                     variant="secondary"
@@ -701,14 +917,16 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
             </CardContent>
           </Card>
         </div>
-        
+
         <div className="lg:col-span-1">
           <Card className="mb-6">
             <CardContent className="p-6">
               <div className="flex justify-between items-center">
-                <h3 className="text-lg font-medium text-neutral-800 mb-4">Live Activity</h3>
+                <h3 className="text-lg font-medium text-neutral-800 mb-4">
+                  Live Activity
+                </h3>
                 <Button
-                  variant="outline" 
+                  variant="outline"
                   size="sm"
                   onClick={() => setShowSystemLogs(true)}
                   className="mb-2"
@@ -722,14 +940,37 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
                   <DialogHeader>
                     <DialogTitle>System Logs</DialogTitle>
                   </DialogHeader>
-                  <div className="py-4 overflow-y-auto" style={{ maxHeight: "calc(80vh - 120px)" }}>
+                  <div
+                    className="py-4 overflow-y-auto"
+                    style={{ maxHeight: "calc(80vh - 120px)" }}
+                  >
                     <table className="min-w-full divide-y divide-neutral-200">
                       <thead>
                         <tr>
-                          <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">Time</th>
-                          <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">Action</th>
-                          <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">Details</th>
-                          <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">Operator</th>
+                          <th
+                            scope="col"
+                            className="px-4 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider"
+                          >
+                            Time
+                          </th>
+                          <th
+                            scope="col"
+                            className="px-4 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider"
+                          >
+                            Action
+                          </th>
+                          <th
+                            scope="col"
+                            className="px-4 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider"
+                          >
+                            Details
+                          </th>
+                          <th
+                            scope="col"
+                            className="px-4 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider"
+                          >
+                            Operator
+                          </th>
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-neutral-200">
@@ -741,23 +982,33 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
                               </td>
                               <td className="px-4 py-2 whitespace-nowrap">
                                 <div className="flex items-center">
-                                  <div className={`flex-shrink-0 h-6 w-6 rounded-full ${log.color} flex items-center justify-center mr-2`}>
-                                    <FontAwesomeIcon icon={log.icon} className="text-xs" />
+                                  <div
+                                    className={`flex-shrink-0 h-6 w-6 rounded-full ${log.color} flex items-center justify-center mr-2`}
+                                  >
+                                    <FontAwesomeIcon
+                                      icon={log.icon}
+                                      className="text-xs"
+                                    />
                                   </div>
-                                  <span className="text-sm font-medium text-neutral-800">{log.title}</span>
+                                  <span className="text-sm font-medium text-neutral-800">
+                                    {log.title}
+                                  </span>
                                 </div>
                               </td>
                               <td className="px-4 py-2 whitespace-nowrap text-sm text-neutral-600">
                                 {log.details}
                               </td>
                               <td className="px-4 py-2 whitespace-nowrap text-sm text-neutral-600">
-                                {log.data.operatorName || 'System'}
+                                {log.data.operatorName || "System"}
                               </td>
                             </tr>
                           ))
                         ) : (
                           <tr>
-                            <td colSpan={4} className="px-4 py-2 text-center text-sm text-neutral-500">
+                            <td
+                              colSpan={4}
+                              className="px-4 py-2 text-center text-sm text-neutral-500"
+                            >
                               No system logs available.
                             </td>
                           </tr>
@@ -767,20 +1018,24 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
                   </div>
                 </DialogContent>
               </Dialog>
-              
+
               <div className="space-y-3 max-h-96 overflow-y-auto">
                 {formattedLogs.length > 0 ? (
                   formattedLogs.slice(0, 15).map((log, index) => (
                     <div key={index} className="flex items-start space-x-3">
-                      <div className={`flex-shrink-0 h-8 w-8 rounded-full ${log.color} flex items-center justify-center`}>
+                      <div
+                        className={`flex-shrink-0 h-8 w-8 rounded-full ${log.color} flex items-center justify-center`}
+                      >
                         <FontAwesomeIcon icon={log.icon} />
                       </div>
                       <div>
                         <p className="text-sm text-neutral-800">
-                          <span className="font-medium">{log.title}</span> {log.details}
+                          <span className="font-medium">{log.title}</span>{" "}
+                          {log.details}
                         </p>
                         <p className="text-xs text-neutral-500">
-                          {new Date(log.timestamp).toLocaleTimeString()} by {log.data.operatorName || 'System'}
+                          {new Date(log.timestamp).toLocaleTimeString()} by{" "}
+                          {log.data.operatorName || "System"}
                         </p>
                       </div>
                     </div>
@@ -788,14 +1043,21 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
                 ) : (
                   <div className="text-center py-4">
                     <div className="bg-neutral-100 rounded-full h-12 w-12 flex items-center justify-center mx-auto mb-3">
-                      <FontAwesomeIcon icon="info-circle" className="text-neutral-400" />
+                      <FontAwesomeIcon
+                        icon="info-circle"
+                        className="text-neutral-400"
+                      />
                     </div>
-                    <p className="text-sm text-neutral-600">No activity logged yet.</p>
-                    <p className="text-xs text-neutral-500 mt-1">Recent actions will appear here.</p>
+                    <p className="text-sm text-neutral-600">
+                      No activity logged yet.
+                    </p>
+                    <p className="text-xs text-neutral-500 mt-1">
+                      Recent actions will appear here.
+                    </p>
                   </div>
                 )}
               </div>
-              
+
               <div className="text-center mt-4">
                 <p className="text-xs text-neutral-500 flex items-center justify-center">
                   {isConnected ? (
@@ -813,10 +1075,12 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
               </div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardContent className="p-6">
-              <h3 className="text-lg font-medium text-neutral-800 mb-4">Station Status</h3>
+              <h3 className="text-lg font-medium text-neutral-800 mb-4">
+                Station Status
+              </h3>
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
@@ -824,41 +1088,68 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
                       <FontAwesomeIcon icon="box" className="text-blue-600" />
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-neutral-800">Distribution</p>
-                      <p className="text-xs text-neutral-500">2 active operators</p>
+                      <p className="text-sm font-medium text-neutral-800">
+                        Distribution
+                      </p>
+                      <p className="text-xs text-neutral-500">
+                        2 active operators
+                      </p>
                     </div>
                   </div>
-                  <Badge variant="outline" className="bg-green-100 text-green-800 border-green-200">
+                  <Badge
+                    variant="outline"
+                    className="bg-green-100 text-green-800 border-green-200"
+                  >
                     Online
                   </Badge>
                 </div>
-                
+
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
                     <div className="bg-purple-100 rounded-full p-2 mr-3">
-                      <FontAwesomeIcon icon="clipboard-check" className="text-purple-600" />
+                      <FontAwesomeIcon
+                        icon="clipboard-check"
+                        className="text-purple-600"
+                      />
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-neutral-800">Checker</p>
-                      <p className="text-xs text-neutral-500">1 active operator</p>
+                      <p className="text-sm font-medium text-neutral-800">
+                        Checker
+                      </p>
+                      <p className="text-xs text-neutral-500">
+                        1 active operator
+                      </p>
                     </div>
                   </div>
-                  <Badge variant="outline" className="bg-green-100 text-green-800 border-green-200">
+                  <Badge
+                    variant="outline"
+                    className="bg-green-100 text-green-800 border-green-200"
+                  >
                     Online
                   </Badge>
                 </div>
-                
+
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
                     <div className="bg-green-100 rounded-full p-2 mr-3">
-                      <FontAwesomeIcon icon="money-bill-alt" className="text-green-600" />
+                      <FontAwesomeIcon
+                        icon="money-bill-alt"
+                        className="text-green-600"
+                      />
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-neutral-800">Cash</p>
-                      <p className="text-xs text-neutral-500">1 active operator</p>
+                      <p className="text-sm font-medium text-neutral-800">
+                        Cash
+                      </p>
+                      <p className="text-xs text-neutral-500">
+                        1 active operator
+                      </p>
                     </div>
                   </div>
-                  <Badge variant="outline" className="bg-green-100 text-green-800 border-green-200">
+                  <Badge
+                    variant="outline"
+                    className="bg-green-100 text-green-800 border-green-200"
+                  >
                     Online
                   </Badge>
                 </div>
