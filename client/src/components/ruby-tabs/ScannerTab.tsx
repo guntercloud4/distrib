@@ -67,19 +67,26 @@ export function ScannerTab({ operatorName }: ScannerTabProps) {
     retry: false
   });
 
-    const { data: distribution } = useQuery({
+    const { 
+    data: distribution,
+    isError: distributionError,
+    refetch: refetchDistributions
+  } = useQuery({
     queryKey: ['/api/distributions', studentId],
     queryFn: async () => {
       if (!studentId.trim()) {
-        return null;
+        return [];
       }
-      const response = await fetch(`/api/distributions/student/${studentId}`);
-
-      if (!response.ok) {
-          return null;
+      try {
+        const response = await fetch(`/api/distributions?studentId=${studentId}`);
+        if (!response.ok) {
+          return [];
+        }
+        return response.json();
+      } catch (error) {
+        console.error("Error fetching distributions:", error);
+        return [];
       }
-
-      return response.json();
     },
     enabled: false,
     staleTime: 10000,
@@ -143,9 +150,9 @@ export function ScannerTab({ operatorName }: ScannerTabProps) {
     setIsLoading(true);
 
     // Fetch student data
-    Promise.all([refetch(), queryClient.prefetchQuery({ queryKey: ['/api/distributions', studentId] })]).then((result) => {
+    refetch().then((result) => {
       setIsLoading(false);
-      if (result[0].isError) {
+      if (result.isError) {
         toast({
           title: "Student not found",
           description: `No student found with ID "${studentId}"`,
@@ -154,7 +161,9 @@ export function ScannerTab({ operatorName }: ScannerTabProps) {
         return;
       }
 
-      if (result[0].data) {
+      if (result.data) {
+        // If student found, also fetch their distribution data
+        refetchDistributions();
         setShowModal(true);
       }
     });
@@ -261,89 +270,77 @@ export function ScannerTab({ operatorName }: ScannerTabProps) {
                   <StudentInfo student={student} showActions={true} />
 
                   {/* Determine distribution status and show appropriate options */}
-                  {(() => {
-                    // If no distribution data or error loading it, assume they need distribution (Pending Distribution)
-                    if (!distribution || distributionError || !Array.isArray(distribution)) {
-                      return (
-                        <Button 
-                          onClick={handleDistribute} 
-                          disabled={distributeMutation.isPending}
-                          className="mt-4 w-full"
-                        >
-                          {distributeMutation.isPending ? (
-                            <>
-                              <FontAwesomeIcon icon="spinner" className="animate-spin mr-2" />
-                              Processing...
-                            </>
-                          ) : (
-                            <>
-                              <FontAwesomeIcon icon="book" className="mr-2" />
-                              Distribute Yearbook
-                            </>
-                          )}
-                        </Button>
-                      );
-                    }
-                    
-                    // Check if student has any confirmed (verified) distributions
-                    const hasConfirmedDistribution = distribution.some(d => d.verified);
-                    
-                    if (hasConfirmedDistribution) {
-                      // Student already has confirmed yearbook - show warning
-                      return (
-                        <div className="mt-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-                          <div className="flex items-center">
-                            <FontAwesomeIcon icon="exclamation-triangle" className="text-yellow-500 mr-3" />
-                            <div>
-                              <h4 className="font-medium text-yellow-800">Already Confirmed</h4>
-                              <p className="text-sm text-yellow-700">
-                                This student has already received and confirmed their yearbook. Please direct them to the Ruby Station desk for assistance.
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    }
-
-                    // Check if there are any distributions (verified or not)
-                    if (distribution.length === 0) {
-                      // Student has no distributions at all (Pending Distribution) - allow distribution
-                      return (
-                        <Button 
-                          onClick={handleDistribute} 
-                          disabled={distributeMutation.isPending}
-                          className="mt-4 w-full"
-                        >
-                          {distributeMutation.isPending ? (
-                            <>
-                              <FontAwesomeIcon icon="spinner" className="animate-spin mr-2" />
-                              Processing...
-                            </>
-                          ) : (
-                            <>
-                              <FontAwesomeIcon icon="book" className="mr-2" />
-                              Distribute Yearbook
-                            </>
-                          )}
-                        </Button>
-                      );
-                    }
-                    
-                    // If we reach here, student has an unverified distribution - show pending verification message
-                    return (
-                      <div className="mt-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-                        <div className="flex items-center">
-                          <FontAwesomeIcon icon="exclamation-triangle" className="text-yellow-500 mr-3" />
-                          <div>
-                            <h4 className="font-medium text-yellow-800">Distribution Pending</h4>
-                            <p className="text-sm text-yellow-700">
-                              This student's yearbook distribution is pending verification. Please direct them to the Checkers Station for verification.
-                            </p>
-                          </div>
+                  {!distribution ? (
+                    // Distribution data not loaded yet - show loading
+                    <div className="mt-4 p-4 bg-neutral-50 rounded-lg flex items-center justify-center">
+                      <FontAwesomeIcon icon="spinner" className="animate-spin mr-2" />
+                      <span>Loading distribution status...</span>
+                    </div>
+                  ) : !Array.isArray(distribution) ? (
+                    // Invalid distribution data - allow distribution
+                    <Button 
+                      onClick={handleDistribute} 
+                      disabled={distributeMutation.isPending}
+                      className="mt-4 w-full"
+                    >
+                      {distributeMutation.isPending ? (
+                        <>
+                          <FontAwesomeIcon icon="spinner" className="animate-spin mr-2" />
+                          Processing...
+                        </>
+                      ) : (
+                        <>
+                          <FontAwesomeIcon icon="book" className="mr-2" />
+                          Distribute Yearbook
+                        </>
+                      )}
+                    </Button>
+                  ) : distribution.length === 0 ? (
+                    // No distributions - allow distribution (Pending Distribution)
+                    <Button 
+                      onClick={handleDistribute} 
+                      disabled={distributeMutation.isPending}
+                      className="mt-4 w-full"
+                    >
+                      {distributeMutation.isPending ? (
+                        <>
+                          <FontAwesomeIcon icon="spinner" className="animate-spin mr-2" />
+                          Processing...
+                        </>
+                      ) : (
+                        <>
+                          <FontAwesomeIcon icon="book" className="mr-2" />
+                          Distribute Yearbook
+                        </>
+                      )}
+                    </Button>
+                  ) : distribution.some(d => d.verified) ? (
+                    // Has verified distribution - show confirmed message
+                    <div className="mt-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                      <div className="flex items-center">
+                        <FontAwesomeIcon icon="exclamation-triangle" className="text-yellow-500 mr-3" />
+                        <div>
+                          <h4 className="font-medium text-yellow-800">Already Confirmed</h4>
+                          <p className="text-sm text-yellow-700">
+                            This student has already received and confirmed their yearbook. Please direct them to the Ruby Station desk for assistance.
+                          </p>
                         </div>
                       </div>
-                    );
-                  })()}
+                    </div>
+                  ) : (
+                    // Has unverified distribution - show pending verification message
+                    <div className="mt-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                      <div className="flex items-center">
+                        <FontAwesomeIcon icon="exclamation-triangle" className="text-yellow-500 mr-3" />
+                        <div>
+                          <h4 className="font-medium text-yellow-800">Distribution Pending</h4>
+                          <p className="text-sm text-yellow-700">
+                            This student's yearbook distribution is pending verification. Please direct them to the Checkers Station for verification.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
