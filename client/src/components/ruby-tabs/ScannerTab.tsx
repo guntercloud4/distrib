@@ -260,7 +260,7 @@ export function ScannerTab({ operatorName }: ScannerTabProps) {
                 <div className="mt-6">
                   <StudentInfo student={student} showActions={true} />
 
-                  {distribution ? (
+                  {Array.isArray(distribution) && distribution.length > 0 ? (
                     <div className="mt-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
                       <div className="flex items-center">
                         <FontAwesomeIcon icon="exclamation-triangle" className="text-yellow-500 mr-3" />
