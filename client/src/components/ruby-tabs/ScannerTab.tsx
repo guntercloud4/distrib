@@ -26,7 +26,7 @@ export function ScannerTab({ operatorName }: ScannerTabProps) {
   const [showModal, setShowModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [distributionSuccess, setDistributionSuccess] = useState(false);
-  
+
   const inputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -52,19 +52,37 @@ export function ScannerTab({ operatorName }: ScannerTabProps) {
         throw new Error("Student ID is required");
       }
       const response = await fetch(`/api/students/${studentId}`);
-      
+
       if (!response.ok) {
         if (response.status === 404) {
           throw new Error(`No student found with ID "${studentId}"`);
         }
         throw new Error("Failed to fetch student");
       }
-      
+
       return response.json();
     },
     enabled: false, // Don't fetch automatically
     staleTime: 10000,
     retry: false
+  });
+
+    const { data: distribution } = useQuery({
+    queryKey: ['/api/distributions', studentId],
+    queryFn: async () => {
+      if (!studentId.trim()) {
+        return null;
+      }
+      const response = await fetch(`/api/distributions/student/${studentId}`);
+
+      if (!response.ok) {
+          return null;
+      }
+
+      return response.json();
+    },
+    enabled: false,
+    staleTime: 10000,
   });
 
   // Distribute mutation
@@ -80,13 +98,13 @@ export function ScannerTab({ operatorName }: ScannerTabProps) {
     onSuccess: (data) => {
       // Show success state
       setDistributionSuccess(true);
-      
+
       // Show success message
       toast({
         title: "Distribution recorded",
         description: `Yearbook distributed to ${student?.firstName} ${student?.lastName}`,
       });
-      
+
       // Log the action via WebSocket
       socketProvider.send({
         type: 'NEW_DISTRIBUTION',
@@ -95,7 +113,7 @@ export function ScannerTab({ operatorName }: ScannerTabProps) {
           studentId: student?.studentId
         }
       });
-      
+
       // Invalidate queries
       queryClient.invalidateQueries({ queryKey: ['/api/distributions'] });
     },
@@ -112,7 +130,7 @@ export function ScannerTab({ operatorName }: ScannerTabProps) {
   // Handle form submit
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!studentId.trim()) {
       toast({
         title: "Empty ID",
@@ -121,14 +139,13 @@ export function ScannerTab({ operatorName }: ScannerTabProps) {
       });
       return;
     }
-    
+
     setIsLoading(true);
-    
+
     // Fetch student data
-    refetch().then((result) => {
+    Promise.all([refetch(), queryClient.prefetchQuery({ queryKey: ['/api/distributions', studentId] })]).then((result) => {
       setIsLoading(false);
-      
-      if (result.isError) {
+      if (result[0].isError) {
         toast({
           title: "Student not found",
           description: `No student found with ID "${studentId}"`,
@@ -136,8 +153,8 @@ export function ScannerTab({ operatorName }: ScannerTabProps) {
         });
         return;
       }
-      
-      if (result.data) {
+
+      if (result[0].data) {
         setShowModal(true);
       }
     });
@@ -164,7 +181,7 @@ export function ScannerTab({ operatorName }: ScannerTabProps) {
             <h3 className="text-lg font-medium text-neutral-800 mb-1">Scanner Station</h3>
             <p className="text-neutral-600 text-sm">Scan student IDs to record book distributions</p>
           </div>
-          
+
           <form onSubmit={handleSubmit} className="max-w-md mx-auto">
             <div className="space-y-4">
               <div>
@@ -188,7 +205,7 @@ export function ScannerTab({ operatorName }: ScannerTabProps) {
                   />
                 </div>
               </div>
-              
+
               <Button 
                 type="submit" 
                 className="w-full"
@@ -210,7 +227,7 @@ export function ScannerTab({ operatorName }: ScannerTabProps) {
           </form>
         </CardContent>
       </Card>
-      
+
       {/* Student Modal */}
       <Dialog open={showModal} onOpenChange={handleModalClose}>
         <DialogContent className="sm:max-w-[650px]">
@@ -219,7 +236,7 @@ export function ScannerTab({ operatorName }: ScannerTabProps) {
               {distributionSuccess ? "Yearbook Distributed" : "Student Information"}
             </DialogTitle>
           </DialogHeader>
-          
+
           {distributionSuccess ? (
             <div className="py-6">
               <div className="flex items-center justify-center">
@@ -227,7 +244,7 @@ export function ScannerTab({ operatorName }: ScannerTabProps) {
                   <FontAwesomeIcon icon="check" className="text-2xl text-green-600" />
                 </div>
               </div>
-              
+
               <div className="text-center mt-4">
                 <h3 className="text-lg font-medium">
                   Success! The yearbook has been distributed to {student?.firstName} {student?.lastName}
@@ -240,14 +257,26 @@ export function ScannerTab({ operatorName }: ScannerTabProps) {
           ) : (
             <div className="py-2">
               {student && (
-                <>
-                  <StudentInfo student={student} />
-                  
-                  <div className="mt-4">
+                <div className="mt-6">
+                  <StudentInfo student={student} showActions={true} />
+
+                  {distribution ? (
+                    <div className="mt-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                      <div className="flex items-center">
+                        <FontAwesomeIcon icon="exclamation-triangle" className="text-yellow-500 mr-3" />
+                        <div>
+                          <h4 className="font-medium text-yellow-800">Already Distributed</h4>
+                          <p className="text-sm text-yellow-700">
+                            This student has already received their yearbook. Please direct them to the Ruby Station desk for assistance.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
                     <Button 
                       onClick={handleDistribute} 
-                      className="w-full"
                       disabled={distributeMutation.isPending}
+                      className="mt-4 w-full"
                     >
                       {distributeMutation.isPending ? (
                         <>
@@ -261,12 +290,12 @@ export function ScannerTab({ operatorName }: ScannerTabProps) {
                         </>
                       )}
                     </Button>
-                  </div>
-                </>
+                  )}
+                </div>
               )}
             </div>
           )}
-          
+
           <DialogFooter>
             <Button variant="outline" onClick={handleModalClose}>
               {distributionSuccess ? "Scan Another ID" : "Cancel"}
