@@ -19,9 +19,10 @@ export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: true,
   max: 10,
-  connectionTimeoutMillis: 5000,
-  idleTimeoutMillis: 30000,
-  allowExitOnIdle: false
+  connectionTimeoutMillis: 0, // Disable connection timeout
+  idleTimeoutMillis: 0, // Disable idle timeout
+  allowExitOnIdle: false,
+  keepAlive: true
 });
 
 pool.on('error', (err) => {

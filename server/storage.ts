@@ -53,7 +53,9 @@ export interface IStorage {
 export class DatabaseStorage implements IStorage {
   // Student operations
   async getStudents(): Promise<Student[]> {
-    let retries = 3;
+    let retries = 5;
+    const backoff = 1000; // Start with 1 second
+    
     while (retries > 0) {
       try {
         const result = await db.select().from(students);
@@ -61,7 +63,8 @@ export class DatabaseStorage implements IStorage {
       } catch (error) {
         retries--;
         if (retries === 0) throw error;
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Exponential backoff
+        await new Promise(resolve => setTimeout(resolve, backoff * (5 - retries)));
       }
     }
     throw new Error("Failed to fetch students after retries");
