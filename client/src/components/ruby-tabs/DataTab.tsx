@@ -606,6 +606,51 @@ export function DataTab() {
                   )}
                 </TableBody>
               </Table>
+              
+              {/* Pagination Controls */}
+              {filteredStudents && filteredStudents.length > 0 && (
+                <div className="flex justify-center items-center mt-4 mb-2 space-x-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setCurrentPage(1)}
+                    disabled={currentPage === 1}
+                  >
+                    <FontAwesomeIcon icon="angle-double-left" className="h-4 w-4" />
+                  </Button>
+                  
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                  >
+                    <FontAwesomeIcon icon="angle-left" className="h-4 w-4" />
+                  </Button>
+                  
+                  <span className="text-sm mx-2">
+                    Page {currentPage} of {totalPages}
+                  </span>
+                  
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                  >
+                    <FontAwesomeIcon icon="angle-right" className="h-4 w-4" />
+                  </Button>
+                  
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setCurrentPage(totalPages)}
+                    disabled={currentPage === totalPages}
+                  >
+                    <FontAwesomeIcon icon="angle-double-right" className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </CardContent>
