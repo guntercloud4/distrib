@@ -378,10 +378,42 @@ export function DatabaseTab({ operatorName }: DatabaseTabProps) {
                       Download student data in various formats.
                     </p>
                     <div className="flex space-x-2">
-                      <Button variant="outline" disabled={!students?.length}>
+                      <Button 
+                      variant="outline" 
+                      disabled={!students?.length}
+                      onClick={() => {
+                        if (students && students.length > 0) {
+                          const headers = Object.keys(students[0]).join(',');
+                          const rows = students.map(student => {
+                            return Object.values(student).map(value => {
+                              if (typeof value === 'string' && value.includes(',')) {
+                                return `"${value}"`;
+                              }
+                              return value;
+                            }).join(',');
+                          });
+                          
+                          const csv = [headers, ...rows].join('\n');
+                          const blob = new Blob([csv], { type: 'text/csv' });
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `yearbook_students_${new Date().toISOString().slice(0,10)}.csv`;
+                          document.body.appendChild(a);
+                          a.click();
+                          document.body.removeChild(a);
+                          URL.revokeObjectURL(url);
+                          
+                          toast({
+                            title: "Export Complete",
+                            description: "Student data has been exported to CSV.",
+                          });
+                        }
+                      }}
+                    >
                         <FontAwesomeIcon icon="file-alt" className="mr-2" />
                         Export to CSV
-                      </Button>
+                    </Button>
                     </div>
                   </div>
 
