@@ -72,17 +72,24 @@ export function ScannerTab({ operatorName }: ScannerTabProps) {
     isError: distributionError,
     refetch: refetchDistributions
   } = useQuery({
-    queryKey: ['/api/distributions', studentId],
+    queryKey: ['/api/distributions/student', studentId],
     queryFn: async () => {
       if (!studentId.trim()) {
         return [];
       }
       try {
-        const response = await fetch(`/api/distributions?studentId=${studentId}`);
+        // Use correct API endpoint for student-specific distributions
+        const response = await fetch(`/api/distributions/student/${studentId}`);
+        console.log("Distribution API response:", response.status, response.statusText);
+        
         if (!response.ok) {
+          console.error("Failed to fetch distributions:", response.status, response.statusText);
           return [];
         }
-        return response.json();
+        
+        const data = await response.json();
+        console.log("Student distributions data:", data);
+        return data;
       } catch (error) {
         console.error("Error fetching distributions:", error);
         return [];
@@ -135,7 +142,7 @@ export function ScannerTab({ operatorName }: ScannerTabProps) {
   });
 
   // Handle form submit
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!studentId.trim()) {
@@ -149,10 +156,12 @@ export function ScannerTab({ operatorName }: ScannerTabProps) {
 
     setIsLoading(true);
 
-    // Fetch student data
-    refetch().then((result) => {
-      setIsLoading(false);
-      if (result.isError) {
+    try {
+      // Fetch student data
+      const studentResult = await refetch();
+      
+      if (studentResult.isError || !studentResult.data) {
+        setIsLoading(false);
         toast({
           title: "Student not found",
           description: `No student found with ID "${studentId}"`,
@@ -160,13 +169,25 @@ export function ScannerTab({ operatorName }: ScannerTabProps) {
         });
         return;
       }
-
-      if (result.data) {
-        // If student found, also fetch their distribution data
-        refetchDistributions();
-        setShowModal(true);
-      }
-    });
+      
+      console.log("Student found:", studentResult.data);
+      
+      // Now fetch distribution data
+      const distributionResult = await refetchDistributions();
+      console.log("Distribution fetch result:", distributionResult);
+      
+      // Continue regardless of distribution result (empty array is valid)
+      setIsLoading(false);
+      setShowModal(true);
+    } catch (error) {
+      console.error("Error in lookup process:", error);
+      setIsLoading(false);
+      toast({
+        title: "Lookup Error",
+        description: "An error occurred during the student lookup",
+        variant: "destructive"
+      });
+    }
   };
 
   // Handle distribution
@@ -269,73 +290,105 @@ export function ScannerTab({ operatorName }: ScannerTabProps) {
                 <div className="mt-6">
                   <StudentInfo student={student} showActions={true} />
 
-                  {/* Get exact distribution status */}
-                  {(() => {
-                    console.log("Distribution data:", distribution);
+                  {/* Distribution Status */}
+                  <div className="mt-4">
+                    {/* Show current distribution status as explicit indicator */}
+                    <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                      <div className="flex items-center">
+                        <FontAwesomeIcon icon="info-circle" className="text-gray-500 mr-3" />
+                        <div>
+                          <h4 className="font-medium text-gray-800">Current Status</h4>
+                          <p className="text-sm text-gray-700 flex items-center mt-1">
+                            {(() => {
+                              // Clear distributions check
+                              const isDistributionArray = Array.isArray(distribution);
+                              const hasNoDistributions = !isDistributionArray || distribution.length === 0;
+                              
+                              // Determine status
+                              if (hasNoDistributions) {
+                                return (
+                                  <>
+                                    <span className="h-2 w-2 rounded-full bg-yellow-400 mr-2"></span>
+                                    <span>Pending Distribution</span>
+                                  </>
+                                );
+                              } else if (distribution.some(d => d.verified)) {
+                                return (
+                                  <>
+                                    <span className="h-2 w-2 rounded-full bg-green-500 mr-2"></span>
+                                    <span>Confirmed</span>
+                                  </>
+                                );
+                              } else {
+                                return (
+                                  <>
+                                    <span className="h-2 w-2 rounded-full bg-blue-500 mr-2"></span>
+                                    <span>Distributed</span>
+                                  </>
+                                );
+                              }
+                            })()}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
                     
-                    // Helper function to get distribution status as exact string
-                    const getDistributionStatus = (): "Pending Distribution" | "Distributed" | "Confirmed" => {
-                      // Check for valid distribution data
-                      if (!distribution || !Array.isArray(distribution)) {
-                        return "Pending Distribution";
+                    {/* Action buttons or messages based on explicit status strings */}
+                    {(() => {
+                      const isDistributionArray = Array.isArray(distribution);
+                      const hasNoDistributions = !isDistributionArray || distribution.length === 0;
+                      
+                      console.log("Distribution data type:", typeof distribution);
+                      console.log("Is array:", isDistributionArray);
+                      console.log("Length:", isDistributionArray ? distribution.length : 'N/A');
+                      console.log("Has no distributions:", hasNoDistributions);
+                      
+                      // Explicit "Pending Distribution" status - show distribute button
+                      if (hasNoDistributions) {
+                        console.log("STATUS: Pending Distribution");
+                        return (
+                          <Button 
+                            onClick={handleDistribute} 
+                            disabled={distributeMutation.isPending}
+                            className="w-full"
+                          >
+                            {distributeMutation.isPending ? (
+                              <>
+                                <FontAwesomeIcon icon="spinner" className="animate-spin mr-2" />
+                                Processing...
+                              </>
+                            ) : (
+                              <>
+                                <FontAwesomeIcon icon="book" className="mr-2" />
+                                Distribute Yearbook
+                              </>
+                            )}
+                          </Button>
+                        );
                       }
                       
-                      // No distributions at all
-                      if (distribution.length === 0) {
-                        return "Pending Distribution";
-                      }
-                      
-                      // Check if any are verified (confirmed)
+                      // Check for "Confirmed" - any verified distributions
                       if (distribution.some(d => d.verified)) {
-                        return "Confirmed";
-                      }
-                      
-                      // Has unverified distributions
-                      return "Distributed";
-                    };
-
-                    // Get the actual status
-                    const status = getDistributionStatus();
-                    console.log("Student status:", status);
-                    
-                    // Return the appropriate UI based on exact status string
-                    if (status === "Pending Distribution") {
-                      return (
-                        <Button 
-                          onClick={handleDistribute} 
-                          disabled={distributeMutation.isPending}
-                          className="mt-4 w-full"
-                        >
-                          {distributeMutation.isPending ? (
-                            <>
-                              <FontAwesomeIcon icon="spinner" className="animate-spin mr-2" />
-                              Processing...
-                            </>
-                          ) : (
-                            <>
-                              <FontAwesomeIcon icon="book" className="mr-2" />
-                              Distribute Yearbook
-                            </>
-                          )}
-                        </Button>
-                      );
-                    } else if (status === "Confirmed") {
-                      return (
-                        <div className="mt-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-                          <div className="flex items-center">
-                            <FontAwesomeIcon icon="exclamation-triangle" className="text-yellow-500 mr-3" />
-                            <div>
-                              <h4 className="font-medium text-yellow-800">Already Confirmed</h4>
-                              <p className="text-sm text-yellow-700">
-                                This student has already received and confirmed their yearbook. Please direct them to the Ruby Station desk for assistance.
-                              </p>
+                        console.log("STATUS: Confirmed");
+                        return (
+                          <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                            <div className="flex items-center">
+                              <FontAwesomeIcon icon="exclamation-triangle" className="text-yellow-500 mr-3" />
+                              <div>
+                                <h4 className="font-medium text-yellow-800">Already Confirmed</h4>
+                                <p className="text-sm text-yellow-700">
+                                  This student has already received and confirmed their yearbook. Please direct them to the Ruby Station desk for assistance.
+                                </p>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      );
-                    } else if (status === "Distributed") {
+                        );
+                      }
+                      
+                      // Otherwise "Distributed" - unverified distributions exist
+                      console.log("STATUS: Distributed");
                       return (
-                        <div className="mt-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                        <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
                           <div className="flex items-center">
                             <FontAwesomeIcon icon="exclamation-triangle" className="text-yellow-500 mr-3" />
                             <div>
@@ -347,8 +400,8 @@ export function ScannerTab({ operatorName }: ScannerTabProps) {
                           </div>
                         </div>
                       );
-                    }
-                  })()}
+                    })()}
+                  </div>
                 </div>
               )}
             </div>
