@@ -1,8 +1,10 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ActionLog, Distribution, Payment } from "@shared/schema";
 import { formatTime } from "@/lib/utils";
 import { useState, useEffect } from "react";
+import { useWsLogs } from "@/hooks/use-ws-logs";
+import { socketProvider } from "@/lib/socket";
 
 interface RecentActivityProps {
   stationType: "distribution" | "checker" | "cash" | "ruby";
@@ -10,6 +12,33 @@ interface RecentActivityProps {
 }
 
 export function RecentActivity({ stationType }: RecentActivityProps) {
+  const queryClient = useQueryClient();
+  const { logs, isConnected } = useWsLogs();
+  
+  // Connect to WebSocket on component mount
+  useEffect(() => {
+    socketProvider.connect();
+    
+    return () => {
+      // No need to disconnect as other components might be using the socket
+    };
+  }, []);
+  
+  // Invalidate queries when new events arrive
+  useEffect(() => {
+    if (logs.length > 0) {
+      const latestLog = logs[0];
+      
+      if (latestLog.type === 'NEW_DISTRIBUTION' && stationType === 'distribution') {
+        queryClient.invalidateQueries({ queryKey: ['/api/distributions'] });
+      } else if (latestLog.type === 'VERIFY_DISTRIBUTION' && stationType === 'checker') {
+        queryClient.invalidateQueries({ queryKey: ['/api/logs'] });
+      } else if (latestLog.type === 'NEW_PAYMENT' && stationType === 'cash') {
+        queryClient.invalidateQueries({ queryKey: ['/api/payments'] });
+      }
+    }
+  }, [logs, stationType, queryClient]);
+  
   // Distribution station shows recent distributions
   const { data: distributions } = useQuery<Distribution[]>({
     queryKey: ['/api/distributions'],
@@ -183,6 +212,15 @@ export function RecentActivity({ stationType }: RecentActivityProps) {
   return (
     <Card className="overflow-hidden">
       <CardContent className="p-3 sm:p-4 md:p-6">
+        <div className="flex justify-between items-center mb-2">
+          <div className="hidden">
+            {/* Space for potential future labels */}
+          </div>
+          <div className="flex items-center gap-1">
+            <span className={`inline-block w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></span>
+            <span className="text-xs text-neutral-500">{isConnected ? 'Live Updates' : 'Connecting...'}</span>
+          </div>
+        </div>
         {getComponentContent()}
       </CardContent>
     </Card>
