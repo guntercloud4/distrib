@@ -269,47 +269,50 @@ export function ScannerTab({ operatorName }: ScannerTabProps) {
                 <div className="mt-6">
                   <StudentInfo student={student} showActions={true} />
 
-                  {/* Always show distribute button for any student with Pending Distribution status */}
-                  <Button 
-                    onClick={handleDistribute} 
-                    disabled={distributeMutation.isPending}
-                    className="mt-4 w-full"
-                  >
-                    {distributeMutation.isPending ? (
-                      <>
-                        <FontAwesomeIcon icon="spinner" className="animate-spin mr-2" />
-                        Processing...
-                      </>
-                    ) : (
-                      <>
-                        <FontAwesomeIcon icon="book" className="mr-2" />
-                        Distribute Yearbook
-                      </>
-                    )}
-                  </Button>
-                  
-                  {/* Optional status display - shown below the button */}
-                  {Array.isArray(distribution) && distribution.length > 0 && (
+                  {/* Show distribute button only if no distribution or check status */}
+                  {(!Array.isArray(distribution) || distribution.length === 0) ? (
+                    // No distributions - Show distribute button (Pending Distribution)
+                    <Button 
+                      onClick={handleDistribute} 
+                      disabled={distributeMutation.isPending}
+                      className="mt-4 w-full"
+                    >
+                      {distributeMutation.isPending ? (
+                        <>
+                          <FontAwesomeIcon icon="spinner" className="animate-spin mr-2" />
+                          Processing...
+                        </>
+                      ) : (
+                        <>
+                          <FontAwesomeIcon icon="book" className="mr-2" />
+                          Distribute Yearbook
+                        </>
+                      )}
+                    </Button>
+                  ) : (
+                    // Has distributions - Show appropriate note based on status
                     distribution.some(d => d.verified) ? (
+                      // Confirmed distribution
                       <div className="mt-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
                         <div className="flex items-center">
-                          <FontAwesomeIcon icon="info-circle" className="text-yellow-500 mr-3" />
+                          <FontAwesomeIcon icon="exclamation-triangle" className="text-yellow-500 mr-3" />
                           <div>
-                            <h4 className="font-medium text-yellow-800">Note: Already Confirmed</h4>
+                            <h4 className="font-medium text-yellow-800">Already Confirmed</h4>
                             <p className="text-sm text-yellow-700">
-                              This student has already confirmed a yearbook, but you can distribute another one if needed.
+                              This student has already received and confirmed their yearbook. Please direct them to the Ruby Station desk for assistance.
                             </p>
                           </div>
                         </div>
                       </div>
                     ) : (
-                      <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                      // Unverified distribution
+                      <div className="mt-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
                         <div className="flex items-center">
-                          <FontAwesomeIcon icon="info-circle" className="text-blue-500 mr-3" />
+                          <FontAwesomeIcon icon="exclamation-triangle" className="text-yellow-500 mr-3" />
                           <div>
-                            <h4 className="font-medium text-blue-800">Note: Distribution Pending</h4>
-                            <p className="text-sm text-blue-700">
-                              This student has a pending distribution, but you can distribute another one if needed.
+                            <h4 className="font-medium text-yellow-800">Distribution Pending</h4>
+                            <p className="text-sm text-yellow-700">
+                              This student's yearbook distribution is pending verification. Please direct them to the Checkers Station for verification.
                             </p>
                           </div>
                         </div>
