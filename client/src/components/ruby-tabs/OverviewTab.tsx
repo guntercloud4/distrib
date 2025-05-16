@@ -76,7 +76,7 @@ export function OverviewTab() {
     
     if (payments) {
       totalPayments = payments.length;
-      totalAmount = payments.reduce((sum, payment) => sum + Number(payment.amount), 0);
+      totalAmount = payments.reduce((sum, payment) => sum + Number(payment.amountPaid || 0), 0);
       uniquePaidStudents = new Set(payments.map(p => p.studentId)).size;
     }
     
