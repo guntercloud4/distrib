@@ -178,18 +178,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Student not found" });
       }
 
-      await storage.deleteStudent(id);
+      const deleted = await storage.deleteStudent(id);
 
-      // Log the action
-      await storage.createLog({
-        studentId: student.studentId,
-        action: "DELETE_STUDENT",
-        details: { student },
-        stationName: "Ruby Station",
-        operatorName: req.body.operatorName,
-      });
+      if (deleted) {
+        // Log the action
+        await storage.createLog({
+          studentId: student.studentId,
+          action: "DELETE_STUDENT",
+          details: { student },
+          stationName: "Ruby Station",
+          operatorName: req.body.operatorName,
+        });
 
-      res.status(204).send();
+        res.json({ success: true });
+      } else {
+        res.status(500).json({ error: "Failed to delete student" });
+      }
     } catch (error) {
       res.status(500).json({ error: "Failed to delete student" });
     }
