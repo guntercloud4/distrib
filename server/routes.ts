@@ -131,21 +131,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const studentData = insertStudentSchema.partial().parse(req.body);
       const student = await storage.updateStudent(id, studentData);
       
+      if (!student) {
+        return res.status(404).json({ error: "Failed to update student - not found" });
+      }
+      
       // Log the action
       await storage.createLog({
         studentId: existingStudent.studentId,
         action: "UPDATE_STUDENT",
         details: { student },
         stationName: "Ruby Station",
-        operatorName: req.body.operatorName,
+        operatorName: req.body.operatorName || "System",
       });
       
       res.json(student);
     } catch (error) {
+      console.error("Error updating student:", error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: "Invalid student data", details: error.errors });
       }
-      res.status(500).json({ error: "Failed to update student" });
+      res.status(500).json({ 
+        error: "Failed to update student",
+        message: error instanceof Error ? error.message : String(error)
+      });
     }
   });
 
