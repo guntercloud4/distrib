@@ -385,16 +385,7 @@ export function DatabaseTab({ operatorName }: DatabaseTabProps) {
                     </div>
                   </div>
 
-                  <div className="pt-4 border-t border-neutral-200">
-                    <h5 className="text-sm font-medium mb-2">Data Backup</h5>
-                    <p className="text-neutral-600 text-sm mb-3">
-                      Create a backup of all system data.
-                    </p>
-                    <Button variant="outline">
-                      <FontAwesomeIcon icon="download" className="mr-2" />
-                      Backup All Data
-                    </Button>
-                  </div>
+                  
                 </div>
               </div>
             </div>
