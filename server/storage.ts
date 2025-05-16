@@ -55,7 +55,7 @@ export class DatabaseStorage implements IStorage {
   async getStudents(): Promise<Student[]> {
     let retries = 5;
     const backoff = 1000; // Start with 1 second
-    
+
     while (retries > 0) {
       try {
         const result = await db.select().from(students);
@@ -97,12 +97,26 @@ export class DatabaseStorage implements IStorage {
       photoPockets: student.photoPockets === undefined ? false : student.photoPockets,
     };
 
-    const result = await db.insert(students).values(studentData).returning();
+    const photoUrl = `https://cdn.gunter.cloud/faces/${studentData.lastName}_${studentData.firstName}.jpg`;
+    const result = await db.insert(students).values({
+      ...studentData,
+      photoUrl
+    }).returning();
     return result[0];
   }
 
   async updateStudent(id: number, student: Partial<InsertStudent>): Promise<Student | undefined> {
-    const result = await db.update(students).set(student).where(eq(students.id, id)).returning();
+    // If name is being updated, update photo URL
+    let updateData = {...student};
+    if (student.firstName || student.lastName) {
+      const current = await this.getStudentById(id);
+      if (current) {
+        const firstName = student.firstName || current.firstName;
+        const lastName = student.lastName || current.lastName;
+        updateData.photoUrl = `https://cdn.gunter.cloud/faces/${lastName}_${firstName}.jpg`;
+      }
+    }
+    const result = await db.update(students).set(updateData).where(eq(students.id, id)).returning();
     return result[0];
   }
 

@@ -248,7 +248,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const distributionData = insertDistributionSchema.parse(req.body);
       
       // Check if student exists
-      const student = await storage.getStudentByStudentId(distributionData.studentId);
+      const student = await storage.getStudentByStudentId(distributionData.studentId.toString());
       if (!student) {
         return res.status(404).json({ error: "Student not found" });
       }
