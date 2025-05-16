@@ -46,6 +46,10 @@ export async function initializeDatabase() {
       const testResult = await pool.query('SELECT NOW()');
       if (testResult.rows.length > 0) {
         log('Database connection successful', 'database');
+        
+        // Test student table
+        const studentTest = await pool.query('SELECT COUNT(*) FROM students');
+        log(`Found ${studentTest.rows[0].count} students in database`, 'database');
       }
 
       // Check if tables exist using direct SQL query
