@@ -536,7 +536,7 @@ export function DataTab() {
                           <TableCell>${Number(student.balanceDue).toFixed(2)}</TableCell>
                           <TableCell>
                             <span className={`py-1 px-2 rounded-full text-xs ${
-                              student.paymentStatus === 'PAID' ? 'bg-green-100 text-green-800' :
+                              student.paymentStatus === 'PAID' || student.paymentStatus === 'FREE' ? 'bg-green-100 text-green-800' :
                               student.paymentStatus === 'PARTIAL' ? 'bg-yellow-100 text-yellow-800' :
                               'bg-red-100 text-red-800'
                             }`}>

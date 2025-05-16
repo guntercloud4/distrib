@@ -149,6 +149,36 @@ export function PosTab({ operatorName }: PosTabProps) {
         payment: data
       });
       
+      // Create a distribution and mark it as verified immediately
+      // This way the student will show as "Confirmed" in the Data tab
+      const confirmDistribution = async () => {
+        try {
+          // First create a distribution
+          const distRes = await apiRequest('POST', '/api/distributions', {
+            studentId: studentId,
+            operatorName: operatorName,
+            timestamp: new Date()
+          });
+          
+          if (distRes.ok) {
+            const distData = await distRes.json();
+            
+            // Then verify it immediately
+            await apiRequest('PUT', `/api/distributions/${distData.id}/verify`, {
+              verifiedBy: operatorName
+            });
+            
+            // Invalidate distributions query to refresh data
+            queryClient.invalidateQueries({ queryKey: ['/api/distributions'] });
+          }
+        } catch (error) {
+          console.error("Error creating/confirming distribution:", error);
+        }
+      };
+      
+      // Call the function to create and confirm distribution
+      confirmDistribution();
+      
       // Show receipt dialog
       setShowReceiptDialog(true);
       
