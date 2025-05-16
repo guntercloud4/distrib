@@ -269,77 +269,52 @@ export function ScannerTab({ operatorName }: ScannerTabProps) {
                 <div className="mt-6">
                   <StudentInfo student={student} showActions={true} />
 
-                  {/* Determine distribution status and show appropriate options */}
-                  {!distribution ? (
-                    // Distribution data not loaded yet - show loading
-                    <div className="mt-4 p-4 bg-neutral-50 rounded-lg flex items-center justify-center">
-                      <FontAwesomeIcon icon="spinner" className="animate-spin mr-2" />
-                      <span>Loading distribution status...</span>
-                    </div>
-                  ) : !Array.isArray(distribution) ? (
-                    // Invalid distribution data - allow distribution
-                    <Button 
-                      onClick={handleDistribute} 
-                      disabled={distributeMutation.isPending}
-                      className="mt-4 w-full"
-                    >
-                      {distributeMutation.isPending ? (
-                        <>
-                          <FontAwesomeIcon icon="spinner" className="animate-spin mr-2" />
-                          Processing...
-                        </>
-                      ) : (
-                        <>
-                          <FontAwesomeIcon icon="book" className="mr-2" />
-                          Distribute Yearbook
-                        </>
-                      )}
-                    </Button>
-                  ) : distribution.length === 0 ? (
-                    // No distributions - allow distribution (Pending Distribution)
-                    <Button 
-                      onClick={handleDistribute} 
-                      disabled={distributeMutation.isPending}
-                      className="mt-4 w-full"
-                    >
-                      {distributeMutation.isPending ? (
-                        <>
-                          <FontAwesomeIcon icon="spinner" className="animate-spin mr-2" />
-                          Processing...
-                        </>
-                      ) : (
-                        <>
-                          <FontAwesomeIcon icon="book" className="mr-2" />
-                          Distribute Yearbook
-                        </>
-                      )}
-                    </Button>
-                  ) : distribution.some(d => d.verified) ? (
-                    // Has verified distribution - show confirmed message
-                    <div className="mt-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-                      <div className="flex items-center">
-                        <FontAwesomeIcon icon="exclamation-triangle" className="text-yellow-500 mr-3" />
-                        <div>
-                          <h4 className="font-medium text-yellow-800">Already Confirmed</h4>
-                          <p className="text-sm text-yellow-700">
-                            This student has already received and confirmed their yearbook. Please direct them to the Ruby Station desk for assistance.
-                          </p>
+                  {/* Always show distribute button for any student with Pending Distribution status */}
+                  <Button 
+                    onClick={handleDistribute} 
+                    disabled={distributeMutation.isPending}
+                    className="mt-4 w-full"
+                  >
+                    {distributeMutation.isPending ? (
+                      <>
+                        <FontAwesomeIcon icon="spinner" className="animate-spin mr-2" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <FontAwesomeIcon icon="book" className="mr-2" />
+                        Distribute Yearbook
+                      </>
+                    )}
+                  </Button>
+                  
+                  {/* Optional status display - shown below the button */}
+                  {Array.isArray(distribution) && distribution.length > 0 && (
+                    distribution.some(d => d.verified) ? (
+                      <div className="mt-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                        <div className="flex items-center">
+                          <FontAwesomeIcon icon="info-circle" className="text-yellow-500 mr-3" />
+                          <div>
+                            <h4 className="font-medium text-yellow-800">Note: Already Confirmed</h4>
+                            <p className="text-sm text-yellow-700">
+                              This student has already confirmed a yearbook, but you can distribute another one if needed.
+                            </p>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ) : (
-                    // Has unverified distribution - show pending verification message
-                    <div className="mt-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-                      <div className="flex items-center">
-                        <FontAwesomeIcon icon="exclamation-triangle" className="text-yellow-500 mr-3" />
-                        <div>
-                          <h4 className="font-medium text-yellow-800">Distribution Pending</h4>
-                          <p className="text-sm text-yellow-700">
-                            This student's yearbook distribution is pending verification. Please direct them to the Checkers Station for verification.
-                          </p>
+                    ) : (
+                      <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                        <div className="flex items-center">
+                          <FontAwesomeIcon icon="info-circle" className="text-blue-500 mr-3" />
+                          <div>
+                            <h4 className="font-medium text-blue-800">Note: Distribution Pending</h4>
+                            <p className="text-sm text-blue-700">
+                              This student has a pending distribution, but you can distribute another one if needed.
+                            </p>
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    )
                   )}
                 </div>
               )}
