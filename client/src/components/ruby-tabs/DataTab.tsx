@@ -163,23 +163,13 @@ export function DataTab() {
   // Delete student mutation
   const deleteStudentMutation = useMutation({
     mutationFn: async (studentId: number) => {
-      const res = await apiRequest('DELETE', `/api/students/${studentId}`);
-      return res.json();
+      await apiRequest('DELETE', `/api/students/${studentId}`);
+      return true;
     },
-    onSuccess: () => {
-      toast({
-        title: "Student deleted",
-        description: "The student has been removed successfully.",
-      });
+    onSettled: () => {
+      // Always refresh and close dialog regardless of success/failure
       queryClient.invalidateQueries({ queryKey: ['/api/students'] });
       setShowStudentDetailDialog(false);
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Failed to delete student",
-        description: error.message,
-        variant: "destructive"
-      });
     }
   });
   
