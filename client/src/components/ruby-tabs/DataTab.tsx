@@ -48,6 +48,9 @@ import Papa from "papaparse";
 export function DataTab() {
   const [searchTerm, setSearchTerm] = useState("");
   const [showAddDialog, setShowAddDialog] = useState(false);
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const studentsPerPage = 10; // Show 10 students per page
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [showStudentDetailDialog, setShowStudentDetailDialog] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
