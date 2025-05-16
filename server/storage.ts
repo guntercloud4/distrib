@@ -62,11 +62,12 @@ export class DatabaseStorage implements IStorage {
         console.log(`Successfully retrieved ${result.length} students`);
         return result;
       } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         console.error('Error fetching students:', error);
         retries--;
         if (retries === 0) {
           console.error('All retries failed');
-          throw new Error(`Failed to fetch students: ${error.message}`);
+          throw new Error(`Failed to fetch students: ${errorMessage}`);
         }
         console.log(`Retrying in ${backoff * (5 - retries)}ms... (${retries} attempts remaining)`);
         await new Promise(resolve => setTimeout(resolve, backoff * (5 - retries)));

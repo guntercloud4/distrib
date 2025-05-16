@@ -370,14 +370,80 @@ export function DataTab() {
     setShowStudentDetailDialog(true);
   };
   
+  // Edit student mutation
+  const editStudentMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number, data: Partial<InsertStudent> }) => {
+      const res = await apiRequest('PUT', `/api/students/${id}`, data);
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Student updated",
+        description: "The student information has been updated successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/students'] });
+      setShowEditDialog(false);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to update student",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
+
   // Handle student edit
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+  
+  const editForm = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      studentId: "",
+      firstName: "",
+      lastName: "",
+      orderNumber: "",
+      orderType: "Standard",
+      balanceDue: "0",
+      paymentStatus: "UNPAID",
+      yearbook: true,
+      personalization: false,
+      signaturePackage: false,
+      clearCover: false,
+      photoPockets: false,
+    },
+  });
+  
   const handleEditStudent = (student: Student) => {
-    // TODO: Implement edit functionality
-    toast({
-      title: "Edit functionality",
-      description: "Student edit is not yet implemented.",
-      variant: "default"
+    setEditingStudent(student);
+    
+    // Set form values
+    editForm.reset({
+      studentId: student.studentId,
+      firstName: student.firstName,
+      lastName: student.lastName,
+      orderNumber: student.orderNumber,
+      orderType: student.orderType,
+      balanceDue: student.balanceDue.toString(),
+      paymentStatus: student.paymentStatus,
+      yearbook: student.yearbook,
+      personalization: student.personalization,
+      signaturePackage: student.signaturePackage,
+      clearCover: student.clearCover,
+      photoPockets: student.photoPockets,
     });
+    
+    setShowEditDialog(true);
+  };
+  
+  const onEditSubmit = (data: z.infer<typeof formSchema>) => {
+    if (editingStudent) {
+      editStudentMutation.mutate({ 
+        id: editingStudent.id, 
+        data: data 
+      });
+    }
   };
   
   return (
@@ -1084,6 +1150,228 @@ export function DataTab() {
               Close
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Edit Student Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Student</DialogTitle>
+            <DialogDescription>
+              Update student information. Click save when you're done.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Form {...editForm}>
+            <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-4 py-4">
+              <FormField
+                control={editForm.control}
+                name="studentId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Student ID</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={editForm.control}
+                  name="firstName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>First Name</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={editForm.control}
+                  name="lastName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Last Name</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={editForm.control}
+                  name="orderType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Order Type</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={editForm.control}
+                  name="orderNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Order Number</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={editForm.control}
+                  name="balanceDue"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Balance Due</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={editForm.control}
+                  name="paymentStatus"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Payment Status</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <h4 className="text-sm font-medium">Features</h4>
+                
+                <div className="grid grid-cols-2 gap-2">
+                  <FormField
+                    control={editForm.control}
+                    name="yearbook"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center space-x-2 space-y-0">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <FormLabel className="font-normal">Yearbook</FormLabel>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={editForm.control}
+                    name="personalization"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center space-x-2 space-y-0">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <FormLabel className="font-normal">Personalization</FormLabel>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={editForm.control}
+                    name="signaturePackage"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center space-x-2 space-y-0">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <FormLabel className="font-normal">Signature Package</FormLabel>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={editForm.control}
+                    name="clearCover"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center space-x-2 space-y-0">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <FormLabel className="font-normal">Clear Cover</FormLabel>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={editForm.control}
+                    name="photoPockets"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center space-x-2 space-y-0">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <FormLabel className="font-normal">Photo Pockets</FormLabel>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+              
+              <DialogFooter>
+                <Button
+                  type="submit"
+                  disabled={editStudentMutation.isPending}
+                >
+                  {editStudentMutation.isPending ? (
+                    <>
+                      <FontAwesomeIcon icon="sync" className="mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    "Save Changes"
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
     </div>
