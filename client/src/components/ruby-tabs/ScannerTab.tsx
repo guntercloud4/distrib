@@ -269,56 +269,86 @@ export function ScannerTab({ operatorName }: ScannerTabProps) {
                 <div className="mt-6">
                   <StudentInfo student={student} showActions={true} />
 
-                  {/* Show distribute button only if no distribution or check status */}
-                  {(!Array.isArray(distribution) || distribution.length === 0) ? (
-                    // No distributions - Show distribute button (Pending Distribution)
-                    <Button 
-                      onClick={handleDistribute} 
-                      disabled={distributeMutation.isPending}
-                      className="mt-4 w-full"
-                    >
-                      {distributeMutation.isPending ? (
-                        <>
-                          <FontAwesomeIcon icon="spinner" className="animate-spin mr-2" />
-                          Processing...
-                        </>
-                      ) : (
-                        <>
-                          <FontAwesomeIcon icon="book" className="mr-2" />
-                          Distribute Yearbook
-                        </>
-                      )}
-                    </Button>
-                  ) : (
-                    // Has distributions - Show appropriate note based on status
-                    distribution.some(d => d.verified) ? (
-                      // Confirmed distribution
-                      <div className="mt-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-                        <div className="flex items-center">
-                          <FontAwesomeIcon icon="exclamation-triangle" className="text-yellow-500 mr-3" />
-                          <div>
-                            <h4 className="font-medium text-yellow-800">Already Confirmed</h4>
-                            <p className="text-sm text-yellow-700">
-                              This student has already received and confirmed their yearbook. Please direct them to the Ruby Station desk for assistance.
-                            </p>
+                  {/* Get exact distribution status */}
+                  {(() => {
+                    console.log("Distribution data:", distribution);
+                    
+                    // Helper function to get distribution status as exact string
+                    const getDistributionStatus = (): "Pending Distribution" | "Distributed" | "Confirmed" => {
+                      // Check for valid distribution data
+                      if (!distribution || !Array.isArray(distribution)) {
+                        return "Pending Distribution";
+                      }
+                      
+                      // No distributions at all
+                      if (distribution.length === 0) {
+                        return "Pending Distribution";
+                      }
+                      
+                      // Check if any are verified (confirmed)
+                      if (distribution.some(d => d.verified)) {
+                        return "Confirmed";
+                      }
+                      
+                      // Has unverified distributions
+                      return "Distributed";
+                    };
+
+                    // Get the actual status
+                    const status = getDistributionStatus();
+                    console.log("Student status:", status);
+                    
+                    // Return the appropriate UI based on exact status string
+                    if (status === "Pending Distribution") {
+                      return (
+                        <Button 
+                          onClick={handleDistribute} 
+                          disabled={distributeMutation.isPending}
+                          className="mt-4 w-full"
+                        >
+                          {distributeMutation.isPending ? (
+                            <>
+                              <FontAwesomeIcon icon="spinner" className="animate-spin mr-2" />
+                              Processing...
+                            </>
+                          ) : (
+                            <>
+                              <FontAwesomeIcon icon="book" className="mr-2" />
+                              Distribute Yearbook
+                            </>
+                          )}
+                        </Button>
+                      );
+                    } else if (status === "Confirmed") {
+                      return (
+                        <div className="mt-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                          <div className="flex items-center">
+                            <FontAwesomeIcon icon="exclamation-triangle" className="text-yellow-500 mr-3" />
+                            <div>
+                              <h4 className="font-medium text-yellow-800">Already Confirmed</h4>
+                              <p className="text-sm text-yellow-700">
+                                This student has already received and confirmed their yearbook. Please direct them to the Ruby Station desk for assistance.
+                              </p>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ) : (
-                      // Unverified distribution
-                      <div className="mt-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-                        <div className="flex items-center">
-                          <FontAwesomeIcon icon="exclamation-triangle" className="text-yellow-500 mr-3" />
-                          <div>
-                            <h4 className="font-medium text-yellow-800">Distribution Pending</h4>
-                            <p className="text-sm text-yellow-700">
-                              This student's yearbook distribution is pending verification. Please direct them to the Checkers Station for verification.
-                            </p>
+                      );
+                    } else if (status === "Distributed") {
+                      return (
+                        <div className="mt-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                          <div className="flex items-center">
+                            <FontAwesomeIcon icon="exclamation-triangle" className="text-yellow-500 mr-3" />
+                            <div>
+                              <h4 className="font-medium text-yellow-800">Distribution Pending</h4>
+                              <p className="text-sm text-yellow-700">
+                                This student's yearbook distribution is pending verification. Please direct them to the Checkers Station for verification.
+                              </p>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    )
-                  )}
+                      );
+                    }
+                  })()}
                 </div>
               )}
             </div>
