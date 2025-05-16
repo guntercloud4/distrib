@@ -192,8 +192,12 @@ export function DataTab() {
   const getDistributionStatus = (studentId: number) => {
     if (!distributions) return { distributed: false, verified: false };
     
-    // Convert number to string for comparison
-    const studentDistributions = distributions.filter(d => Number(d.studentId) === studentId);
+    // Get the student object to find their studentId (rather than database id)
+    const student = students?.find(s => s.id === studentId);
+    if (!student) return { distributed: false, verified: false };
+    
+    // Match using studentId (not the database id)
+    const studentDistributions = distributions.filter(d => d.studentId === student.studentId);
     if (studentDistributions.length === 0) return { distributed: false, verified: false };
     
     // Check if any distribution is verified
@@ -547,7 +551,7 @@ export function DataTab() {
                               </span>
                             ) : distributionStatus.verified ? (
                               <span className="py-1 px-2 rounded-full text-xs bg-green-100 text-green-800">
-                                Verified
+                                Confirmed
                               </span>
                             ) : (
                               <span className="py-1 px-2 rounded-full text-xs bg-yellow-100 text-yellow-800">
