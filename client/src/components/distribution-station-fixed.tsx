@@ -132,10 +132,8 @@ export function DistributionStation({ operatorName, onLogout }: DistributionStat
     if (!student) return;
     
     distributeMutation.mutate({
-      studentId: student.id,
-      distributedBy: operatorName,
-      timestamp: new Date(),
-      verified: false
+      studentId: student.studentId, // Use studentId instead of id
+      operatorName: operatorName
     });
   };
 
