@@ -97,6 +97,7 @@ export class DatabaseStorage implements IStorage {
       photoPockets: student.photoPockets === undefined ? false : student.photoPockets,
     };
 
+    // Use the format Last_First.jpg for photo URLs
     const photoUrl = `https://cdn.gunter.cloud/faces/${studentData.lastName}_${studentData.firstName}.jpg`;
     const result = await db.insert(students).values({
       ...studentData,
