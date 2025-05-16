@@ -5,28 +5,28 @@ import { setupWebSocketServer, broadcastMessage } from "./ws";
 import { db, pool } from "./db";
 import { sql } from "drizzle-orm";
 import { z } from "zod";
-import { 
-  insertStudentSchema, 
-  insertActionLogSchema, 
-  insertDistributionSchema, 
-  insertPaymentSchema, 
+import {
+  insertStudentSchema,
+  insertActionLogSchema,
+  insertDistributionSchema,
+  insertPaymentSchema,
   paymentProcessSchema,
-  csvMappingSchema
+  csvMappingSchema,
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Create HTTP server
   const httpServer = createServer(app);
-  
+
   // Setup WebSocket server
   setupWebSocketServer(httpServer);
-  
+
   // Database status check route
   app.get("/api/database/status", async (_req: Request, res: Response) => {
     try {
       // Check if database is connected and initialized
-      const result = await pool.query('SELECT NOW()');
-      
+      const result = await pool.query("SELECT NOW()");
+
       // Check if tables exist
       const studentTableResult = await pool.query(`
         SELECT EXISTS (
@@ -35,28 +35,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
           AND table_name = 'students'
         );
       `);
-      
+
       const tablesExist = studentTableResult.rows[0]?.exists || false;
       const serverTime = result.rows[0]?.now || new Date().toISOString();
-      
+
       let message = "Database connection established.";
       if (tablesExist) {
         message += " All required tables are present.";
       } else {
         message += " Database structure is being initialized.";
       }
-      
-      res.json({ 
-        status: "ok", 
+
+      res.json({
+        status: "ok",
         message,
         serverTime,
-        tablesInitialized: tablesExist
+        tablesInitialized: tablesExist,
       });
     } catch (error) {
       console.error("Database status check failed:", error);
-      res.status(500).json({ 
-        status: "error", 
-        message: "Database connection failed." 
+      res.status(500).json({
+        status: "error",
+        message: "Database connection failed.",
       });
     }
   });
@@ -76,11 +76,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { studentId } = req.params;
       const student = await storage.getStudentByStudentId(studentId);
-      
+
       if (!student) {
         return res.status(404).json({ error: "Student not found" });
       }
-      
+
       res.json(student);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch student" });
@@ -92,12 +92,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Keep balance as string since that's what the schema expects
       const studentData = {
-        ...req.body
+        ...req.body,
       };
-      
+
       const validatedData = insertStudentSchema.parse(studentData);
       const student = await storage.createStudent(validatedData);
-      
+
       // Log the action
       await storage.createLog({
         studentId: student.studentId,
@@ -106,15 +106,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         stationName: "Ruby Station",
         operatorName: req.body.operatorName || "System",
       });
-      
+
       res.status(201).json(student);
     } catch (error) {
       if (error instanceof z.ZodError) {
         console.error("Validation error:", error.errors);
-        return res.status(400).json({ error: "Invalid student data", details: error.errors });
+        return res
+          .status(400)
+          .json({ error: "Invalid student data", details: error.errors });
       }
       console.error("Error creating student:", error);
-      res.status(500).json({ error: "Failed to create student", message: error instanceof Error ? error.message : String(error) });
+      res
+        .status(500)
+        .json({
+          error: "Failed to create student",
+          message: error instanceof Error ? error.message : String(error),
+        });
     }
   });
 
@@ -123,18 +130,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       const existingStudent = await storage.getStudentById(id);
-      
+
       if (!existingStudent) {
         return res.status(404).json({ error: "Student not found" });
       }
-      
+
       const studentData = insertStudentSchema.partial().parse(req.body);
       const student = await storage.updateStudent(id, studentData);
-      
+
       if (!student) {
-        return res.status(404).json({ error: "Failed to update student - not found" });
+        return res
+          .status(404)
+          .json({ error: "Failed to update student - not found" });
       }
-      
+
       // Log the action
       await storage.createLog({
         studentId: existingStudent.studentId,
@@ -143,16 +152,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         stationName: "Ruby Station",
         operatorName: req.body.operatorName || "System",
       });
-      
+
       res.json(student);
     } catch (error) {
       console.error("Error updating student:", error);
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ error: "Invalid student data", details: error.errors });
+        return res
+          .status(400)
+          .json({ error: "Invalid student data", details: error.errors });
       }
-      res.status(500).json({ 
+      res.status(500).json({
         error: "Failed to update student",
-        message: error instanceof Error ? error.message : String(error)
+        message: error instanceof Error ? error.message : String(error),
       });
     }
   });
@@ -162,13 +173,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       const student = await storage.getStudentById(id);
-      
+
       if (!student) {
         return res.status(404).json({ error: "Student not found" });
       }
-      
+
       await storage.deleteStudent(id);
-      
+
       // Log the action
       await storage.createLog({
         studentId: student.studentId,
@@ -177,7 +188,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         stationName: "Ruby Station",
         operatorName: req.body.operatorName,
       });
-      
+
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "Failed to delete student" });
@@ -187,24 +198,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get logs
   app.get("/api/logs", async (req: Request, res: Response) => {
     try {
-      const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
+      const limit = req.query.limit
+        ? parseInt(req.query.limit as string)
+        : undefined;
       const logs = await storage.getLogs(limit);
       res.json(logs);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch logs" });
     }
   });
-  
+
   // Get logs by student ID
-  app.get("/api/logs/student/:studentId", async (req: Request, res: Response) => {
-    try {
-      const { studentId } = req.params;
-      const logs = await storage.getLogsByStudentId(studentId);
-      res.json(logs);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to fetch logs" });
-    }
-  });
+  app.get(
+    "/api/logs/student/:studentId",
+    async (req: Request, res: Response) => {
+      try {
+        const { studentId } = req.params;
+        const logs = await storage.getLogsByStudentId(studentId);
+        res.json(logs);
+      } catch (error) {
+        res.status(500).json({ error: "Failed to fetch logs" });
+      }
+    },
+  );
 
   // Create a log
   app.post("/api/logs", async (req: Request, res: Response) => {
@@ -214,7 +230,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(log);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ error: "Invalid log data", details: error.errors });
+        return res
+          .status(400)
+          .json({ error: "Invalid log data", details: error.errors });
       }
       res.status(500).json({ error: "Failed to create log" });
     }
@@ -223,7 +241,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get distributions
   app.get("/api/distributions", async (req: Request, res: Response) => {
     try {
-      const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
+      const limit = req.query.limit
+        ? parseInt(req.query.limit as string)
+        : undefined;
       const distributions = await storage.getDistributions(limit);
       res.json(distributions);
     } catch (error) {
@@ -232,29 +252,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get distributions by student ID
-  app.get("/api/distributions/student/:studentId", async (req: Request, res: Response) => {
-    try {
-      const { studentId } = req.params;
-      const distributions = await storage.getDistributionsByStudentId(studentId);
-      res.json(distributions);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to fetch distributions" });
-    }
-  });
+  app.get(
+    "/api/distributions/student/:studentId",
+    async (req: Request, res: Response) => {
+      try {
+        const { studentId } = req.params;
+        const distributions =
+          await storage.getDistributionsByStudentId(studentId);
+        res.json(distributions);
+      } catch (error) {
+        res.status(500).json({ error: "Failed to fetch distributions" });
+      }
+    },
+  );
 
   // Create a distribution
   app.post("/api/distributions", async (req: Request, res: Response) => {
     try {
       const distributionData = insertDistributionSchema.parse(req.body);
-      
+
       // Check if student exists
-      const student = await storage.getStudentByStudentId(distributionData.studentId.toString());
+      const student = await storage.getStudentByStudentId(
+        distributionData.studentId.toString(),
+      );
       if (!student) {
         return res.status(404).json({ error: "Student not found" });
       }
-      
+
       const distribution = await storage.createDistribution(distributionData);
-      
+
       // Log the action
       const actionLog = await storage.createLog({
         studentId: distribution.studentId,
@@ -263,75 +289,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
         stationName: "Distribution Station",
         operatorName: distribution.operatorName,
       });
-      
+
       // Broadcast distribution event
       broadcastMessage({
-        type: 'NEW_DISTRIBUTION',
-        data: distribution
+        type: "NEW_DISTRIBUTION",
+        data: distribution,
       });
-      
+
       // Also broadcast log event
       broadcastMessage({
-        type: 'LOG_ACTION',
-        data: actionLog
+        type: "LOG_ACTION",
+        data: actionLog,
       });
-      
+
       res.status(201).json(distribution);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ error: "Invalid distribution data", details: error.errors });
+        return res
+          .status(400)
+          .json({ error: "Invalid distribution data", details: error.errors });
       }
       res.status(500).json({ error: "Failed to create distribution" });
     }
   });
 
   // Verify a distribution
-  app.put("/api/distributions/:id/verify", async (req: Request, res: Response) => {
-    try {
-      const id = parseInt(req.params.id);
-      const { verifiedBy } = req.body;
-      
-      if (!verifiedBy) {
-        return res.status(400).json({ error: "Verified by is required" });
+  app.put(
+    "/api/distributions/:id/verify",
+    async (req: Request, res: Response) => {
+      try {
+        const id = parseInt(req.params.id);
+        const { verifiedBy } = req.body;
+
+        if (!verifiedBy) {
+          return res.status(400).json({ error: "Verified by is required" });
+        }
+
+        const distribution = await storage.verifyDistribution(id, verifiedBy);
+
+        if (!distribution) {
+          return res.status(404).json({ error: "Distribution not found" });
+        }
+
+        // Log the action
+        const actionLog = await storage.createLog({
+          studentId: distribution.studentId,
+          action: "VERIFY_DISTRIBUTION",
+          details: { distribution },
+          stationName: "Checkers Station",
+          operatorName: verifiedBy,
+        });
+
+        // Broadcast verification event
+        broadcastMessage({
+          type: "VERIFY_DISTRIBUTION",
+          data: distribution,
+        });
+
+        // Also broadcast log event
+        broadcastMessage({
+          type: "LOG_ACTION",
+          data: actionLog,
+        });
+
+        res.json(distribution);
+      } catch (error) {
+        res.status(500).json({ error: "Failed to verify distribution" });
       }
-      
-      const distribution = await storage.verifyDistribution(id, verifiedBy);
-      
-      if (!distribution) {
-        return res.status(404).json({ error: "Distribution not found" });
-      }
-      
-      // Log the action
-      const actionLog = await storage.createLog({
-        studentId: distribution.studentId,
-        action: "VERIFY_DISTRIBUTION",
-        details: { distribution },
-        stationName: "Checkers Station",
-        operatorName: verifiedBy,
-      });
-      
-      // Broadcast verification event
-      broadcastMessage({
-        type: 'VERIFY_DISTRIBUTION',
-        data: distribution
-      });
-      
-      // Also broadcast log event
-      broadcastMessage({
-        type: 'LOG_ACTION',
-        data: actionLog
-      });
-      
-      res.json(distribution);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to verify distribution" });
-    }
-  });
+    },
+  );
 
   // Get payments
   app.get("/api/payments", async (req: Request, res: Response) => {
     try {
-      const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
+      const limit = req.query.limit
+        ? parseInt(req.query.limit as string)
+        : undefined;
       const payments = await storage.getPayments(limit);
       res.json(payments);
     } catch (error) {
@@ -340,30 +373,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get payments by student ID
-  app.get("/api/payments/student/:studentId", async (req: Request, res: Response) => {
-    try {
-      const { studentId } = req.params;
-      const payments = await storage.getPaymentsByStudentId(studentId);
-      res.json(payments);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to fetch payments" });
-    }
-  });
+  app.get(
+    "/api/payments/student/:studentId",
+    async (req: Request, res: Response) => {
+      try {
+        const { studentId } = req.params;
+        const payments = await storage.getPaymentsByStudentId(studentId);
+        res.json(payments);
+      } catch (error) {
+        res.status(500).json({ error: "Failed to fetch payments" });
+      }
+    },
+  );
 
   // Process a payment
   app.post("/api/payments/process", async (req: Request, res: Response) => {
     try {
       const paymentData = paymentProcessSchema.parse(req.body);
-      
+
       // Check if student exists, if not create one
       let student = await storage.getStudentByStudentId(paymentData.studentId);
-      
+
       if (!student) {
         // Extract first and last name from studentName
-        const nameParts = paymentData.studentName.split(' ');
-        const lastName = nameParts.length > 1 ? nameParts.pop() || '' : '';
-        const firstName = nameParts.join(' ');
-        
+        const nameParts = paymentData.studentName.split(" ");
+        const lastName = nameParts.length > 1 ? nameParts.pop() || "" : "";
+        const firstName = nameParts.join(" ");
+
         // Create a new student
         student = await storage.createStudent({
           studentId: paymentData.studentId,
@@ -381,7 +417,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           photoPockets: false,
           photoUrl: null,
         });
-        
+
         // Log new student creation
         const actionLog = await storage.createLog({
           studentId: student.studentId,
@@ -390,16 +426,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           stationName: "Cash Station",
           operatorName: paymentData.operatorName,
         });
-        
+
         // Broadcast student creation
         broadcastMessage({
-          type: 'LOG_ACTION',
-          data: actionLog
+          type: "LOG_ACTION",
+          data: actionLog,
         });
       }
-      
+
       const payment = await storage.processPayment(paymentData);
-      
+
       // Log the action
       const actionLog = await storage.createLog({
         studentId: payment.studentId,
@@ -408,23 +444,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         stationName: "Cash Station",
         operatorName: payment.operatorName,
       });
-      
+
       // Broadcast payment event
       broadcastMessage({
-        type: 'NEW_PAYMENT',
-        data: payment
+        type: "NEW_PAYMENT",
+        data: payment,
       });
-      
+
       // Also broadcast log event
       broadcastMessage({
-        type: 'LOG_ACTION',
-        data: actionLog
+        type: "LOG_ACTION",
+        data: actionLog,
       });
-      
+
       res.status(201).json(payment);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ error: "Invalid payment data", details: error.errors });
+        return res
+          .status(400)
+          .json({ error: "Invalid payment data", details: error.errors });
       }
       res.status(500).json({ error: "Failed to process payment" });
     }
@@ -434,10 +472,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/students/import", async (req: Request, res: Response) => {
     try {
       const { mappings, csvData, operatorName } = req.body;
-      
+
       // Validate mappings
       const validMappings = csvMappingSchema.parse(mappings);
-      
+
       // Parse CSV data based on mappings
       const parsedStudents = csvData.map((row: any) => {
         return {
@@ -448,19 +486,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
           orderNumber: row[validMappings.orderNumberField],
           balanceDue: parseFloat(row[validMappings.balanceDueField]) || 0,
           paymentStatus: row[validMappings.paymentStatusField],
-          yearbook: validMappings.yearbookField ? row[validMappings.yearbookField] === 'Yes' : false,
-          personalization: validMappings.personalizationField ? row[validMappings.personalizationField] === 'Yes' : false,
-          signaturePackage: validMappings.signaturePackageField ? row[validMappings.signaturePackageField] === 'Yes' : false,
-          clearCover: validMappings.clearCoverField ? row[validMappings.clearCoverField] === 'Yes' : false,
-          photoPockets: validMappings.photoPocketsField ? row[validMappings.photoPocketsField] === 'Yes' : false,
+          yearbook: validMappings.yearbookField
+            ? row[validMappings.yearbookField] === "Yes"
+            : false,
+          personalization: validMappings.personalizationField
+            ? row[validMappings.personalizationField] === "Yes"
+            : false,
+          signaturePackage: validMappings.signaturePackageField
+            ? row[validMappings.signaturePackageField] === "Yes"
+            : false,
+          clearCover: validMappings.clearCoverField
+            ? row[validMappings.clearCoverField] === "Yes"
+            : false,
+          photoPockets: validMappings.photoPocketsField
+            ? row[validMappings.photoPocketsField] === "Yes"
+            : false,
           orderEnteredDate: new Date(),
           photoUrl: null,
         };
       });
-      
+
       // Import students
       const importedStudents = await storage.importStudents(parsedStudents);
-      
+
       // Log the action
       const actionLog = await storage.createLog({
         studentId: null,
@@ -469,95 +517,106 @@ export async function registerRoutes(app: Express): Promise<Server> {
         stationName: "Ruby Station",
         operatorName,
       });
-      
+
       // Broadcast log event
       broadcastMessage({
-        type: 'LOG_ACTION',
-        data: actionLog
+        type: "LOG_ACTION",
+        data: actionLog,
       });
-      
+
       res.status(201).json({
         imported: importedStudents.length,
         students: importedStudents,
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ error: "Invalid mapping data", details: error.errors });
+        return res
+          .status(400)
+          .json({ error: "Invalid mapping data", details: error.errors });
       }
       res.status(500).json({ error: "Failed to import students" });
     }
   });
 
   // Issue a free book
-  app.post("/api/students/:studentId/free-book", async (req: Request, res: Response) => {
-    try {
-      const { studentId } = req.params;
-      const { operatorName } = req.body;
-      
-      if (!operatorName) {
-        return res.status(400).json({ error: "Operator name is required" });
-      }
-      
-      // Check if student exists
-      const student = await storage.getStudentByStudentId(studentId);
-      if (!student) {
-        return res.status(404).json({ error: "Student not found" });
-      }
-      
-      // Update student
-      const updatedStudent = await storage.updateStudent(student.id, {
-        balanceDue: "0",
-        paymentStatus: "Free",
-        yearbook: true,
-      });
-      
-      // Create a distribution
-      const distribution = await storage.createDistribution({
-        studentId,
-        operatorName,
-      });
-      
-      // Immediately verify the distribution to mark as "Confirmed"
-      const verifiedDistribution = await storage.verifyDistribution(distribution.id, operatorName);
-      
-      // Log the action
-      const actionLog = await storage.createLog({
-        studentId,
-        action: "FREE_BOOK",
-        details: { student: updatedStudent, distribution: verifiedDistribution },
-        stationName: "Ruby Station",
-        operatorName,
-      });
-      
-      // Only broadcast if verification succeeded
-      if (verifiedDistribution) {
-        // Broadcast as verified distribution event
-        broadcastMessage({
-          type: 'VERIFY_DISTRIBUTION',
-          data: verifiedDistribution as Distribution
+  app.post(
+    "/api/students/:studentId/free-book",
+    async (req: Request, res: Response) => {
+      try {
+        const { studentId } = req.params;
+        const { operatorName } = req.body;
+
+        if (!operatorName) {
+          return res.status(400).json({ error: "Operator name is required" });
+        }
+
+        // Check if student exists
+        const student = await storage.getStudentByStudentId(studentId);
+        if (!student) {
+          return res.status(404).json({ error: "Student not found" });
+        }
+
+        // Update student
+        const updatedStudent = await storage.updateStudent(student.id, {
+          balanceDue: "0",
+          paymentStatus: "PAID",
+          yearbook: true,
         });
-      } else {
-        // Fallback to broadcast as regular distribution if verification failed
-        broadcastMessage({
-          type: 'NEW_DISTRIBUTION',
-          data: distribution
+
+        // Create a distribution
+        const distribution = await storage.createDistribution({
+          studentId,
+          operatorName,
         });
+
+        // Immediately verify the distribution to mark as "Confirmed"
+        const verifiedDistribution = await storage.verifyDistribution(
+          distribution.id,
+          operatorName,
+        );
+
+        // Log the action
+        const actionLog = await storage.createLog({
+          studentId,
+          action: "FREE_BOOK",
+          details: {
+            student: updatedStudent,
+            distribution: verifiedDistribution,
+          },
+          stationName: "Ruby Station",
+          operatorName,
+        });
+
+        // Only broadcast if verification succeeded
+        if (verifiedDistribution) {
+          // Broadcast as verified distribution event
+          broadcastMessage({
+            type: "VERIFY_DISTRIBUTION",
+            data: verifiedDistribution as Distribution,
+          });
+        } else {
+          // Fallback to broadcast as regular distribution if verification failed
+          broadcastMessage({
+            type: "NEW_DISTRIBUTION",
+            data: distribution,
+          });
+        }
+
+        // Also broadcast log event
+        broadcastMessage({
+          type: "LOG_ACTION",
+          data: actionLog,
+        });
+
+        res.json({
+          student: updatedStudent,
+          distribution: verifiedDistribution,
+        });
+      } catch (error) {
+        res.status(500).json({ error: "Failed to issue free book" });
       }
-      
-      // Also broadcast log event
-      broadcastMessage({
-        type: 'LOG_ACTION',
-        data: actionLog
-      });
-      
-      res.json({
-        student: updatedStudent,
-        distribution: verifiedDistribution,
-      });
-    } catch (error) {
-      res.status(500).json({ error: "Failed to issue free book" });
-    }
-  });
+    },
+  );
 
   return httpServer;
 }
