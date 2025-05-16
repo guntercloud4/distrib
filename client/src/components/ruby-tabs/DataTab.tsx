@@ -409,20 +409,6 @@ export function DataTab() {
                 onChange={handleFileChange}
                 className="hidden"
               />
-              <Button 
-                variant="outline"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <FontAwesomeIcon icon="file-import" className="mr-2" />
-                Import CSV
-              </Button>
-              <Input
-                ref={fileInputRef}
-                type="file"
-                accept=".csv"
-                onChange={handleFileChange}
-                className="hidden"
-              />
             </div>
           </div>
           
