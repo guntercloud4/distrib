@@ -260,11 +260,10 @@ export function ScannerTab({ operatorName }: ScannerTabProps) {
                 <div className="mt-6">
                   <StudentInfo student={student} showActions={true} />
 
-                  {/* Check distribution status */}
+                  {/* Determine distribution status and show appropriate options */}
                   {(() => {
-                    // Check if student has any distributions at all
-                    if (!Array.isArray(distribution) || distribution.length === 0) {
-                      // No distribution records - allow distribution (Pending Distribution status)
+                    // If no distribution data or error loading it, assume they need distribution (Pending Distribution)
+                    if (!distribution || distributionError || !Array.isArray(distribution)) {
                       return (
                         <Button 
                           onClick={handleDistribute} 
@@ -288,8 +287,9 @@ export function ScannerTab({ operatorName }: ScannerTabProps) {
                     
                     // Check if student has any confirmed (verified) distributions
                     const hasConfirmedDistribution = distribution.some(d => d.verified);
+                    
                     if (hasConfirmedDistribution) {
-                      // Confirmed distribution found - show warning
+                      // Student already has confirmed yearbook - show warning
                       return (
                         <div className="mt-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
                           <div className="flex items-center">
@@ -304,8 +304,32 @@ export function ScannerTab({ operatorName }: ScannerTabProps) {
                         </div>
                       );
                     }
+
+                    // Check if there are any distributions (verified or not)
+                    if (distribution.length === 0) {
+                      // Student has no distributions at all (Pending Distribution) - allow distribution
+                      return (
+                        <Button 
+                          onClick={handleDistribute} 
+                          disabled={distributeMutation.isPending}
+                          className="mt-4 w-full"
+                        >
+                          {distributeMutation.isPending ? (
+                            <>
+                              <FontAwesomeIcon icon="spinner" className="animate-spin mr-2" />
+                              Processing...
+                            </>
+                          ) : (
+                            <>
+                              <FontAwesomeIcon icon="book" className="mr-2" />
+                              Distribute Yearbook
+                            </>
+                          )}
+                        </Button>
+                      );
+                    }
                     
-                    // If we get here, student has unverified distribution(s) (Distributed status)
+                    // If we reach here, student has an unverified distribution - show pending verification message
                     return (
                       <div className="mt-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
                         <div className="flex items-center">
