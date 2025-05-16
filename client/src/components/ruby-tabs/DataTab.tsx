@@ -57,6 +57,10 @@ export function DataTab() {
   const [mapping, setMapping] = useState<{[key: string]: string}>({});
   const [isImporting, setIsImporting] = useState(false);
   
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const studentsPerPage = 10;
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -235,6 +239,17 @@ export function DataTab() {
       student.orderNumber.toLowerCase().includes(searchLower)
     );
   });
+  
+  // Get current page of students for pagination
+  const indexOfLastStudent = currentPage * studentsPerPage;
+  const indexOfFirstStudent = indexOfLastStudent - studentsPerPage;
+  const currentStudents = filteredStudents?.slice(indexOfFirstStudent, indexOfLastStudent);
+  
+  // Calculate total number of pages
+  const totalPages = Math.ceil((filteredStudents?.length || 0) / studentsPerPage);
+  
+  // Change page
+  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
   
   // Handle file selection for import
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -511,7 +526,7 @@ export function DataTab() {
               <Table>
                 <TableCaption>
                   {filteredStudents?.length 
-                    ? `${filteredStudents.length} student${filteredStudents.length > 1 ? 's' : ''} found`
+                    ? `Showing ${indexOfFirstStudent + 1}-${Math.min(indexOfLastStudent, filteredStudents.length)} of ${filteredStudents.length} student${filteredStudents.length > 1 ? 's' : ''}`
                     : 'No students found'}
                 </TableCaption>
                 <TableHeader className="sticky top-0 bg-white z-10">
@@ -527,8 +542,8 @@ export function DataTab() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredStudents?.length ? (
-                    filteredStudents.map((student) => {
+                  {currentStudents?.length ? (
+                    currentStudents.map((student) => {
                       const distributionStatus = getDistributionStatus(student.id);
                       return (
                         <TableRow key={student.id}>
