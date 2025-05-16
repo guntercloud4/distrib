@@ -112,12 +112,16 @@ export function DataTab() {
       const res = await apiRequest('POST', '/api/students', data);
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast({
         title: "Student added",
-        description: "The student has been added successfully.",
+        description: "The student has been added successfully and is pending distribution.",
       });
+      
+      // Invalidate all related queries to ensure proper status updates
       queryClient.invalidateQueries({ queryKey: ['/api/students'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/distributions'] });
+      
       setShowAddDialog(false);
       form.reset();
     },
@@ -139,10 +143,14 @@ export function DataTab() {
     onSuccess: (data) => {
       toast({
         title: "Import complete",
-        description: `Successfully imported ${data.success} of ${data.total} students.`,
+        description: `Successfully imported ${data.success} of ${data.total} students. All students start with "Pending Distribution" status.`,
         variant: data.errors > 0 ? "destructive" : "default"
       });
+      
+      // Invalidate all related queries to ensure proper status updates
       queryClient.invalidateQueries({ queryKey: ['/api/students'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/distributions'] });
+      
       setShowImportDialog(false);
       setFileSelected(false);
       setParsedData([]);
@@ -180,6 +188,8 @@ export function DataTab() {
   
   // Get distribution status for student
   const getDistributionStatus = (studentId: number) => {
+    // Default to "Pending Distribution" status
+    // This ensures new students are properly marked as pending
     if (!distributions) return { distributed: false, verified: false };
     
     // Get the student object to find their studentId (rather than database id)
@@ -188,6 +198,8 @@ export function DataTab() {
     
     // Match using studentId (not the database id)
     const studentDistributions = distributions.filter(d => d.studentId === student.studentId);
+    
+    // If no distributions, student is "Pending Distribution"
     if (studentDistributions.length === 0) return { distributed: false, verified: false };
     
     // Check if any distribution is verified
