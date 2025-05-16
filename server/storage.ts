@@ -26,26 +26,26 @@ export interface IStorage {
   createStudent(student: InsertStudent): Promise<Student>;
   updateStudent(id: number, student: Partial<InsertStudent>): Promise<Student | undefined>;
   deleteStudent(id: number): Promise<boolean>;
-  
+
   // Action logs operations
   getLogs(limit?: number): Promise<ActionLog[]>;
   getLogsByStudentId(studentId: string): Promise<ActionLog[]>;
   createLog(log: InsertActionLog): Promise<ActionLog>;
-  
+
   // Distribution operations
   getDistributions(limit?: number): Promise<Distribution[]>;
   getDistributionsByStudentId(studentId: string): Promise<Distribution[]>;
   createDistribution(distribution: InsertDistribution): Promise<Distribution>;
   verifyDistribution(id: number, verifiedBy: string): Promise<Distribution | undefined>;
-  
+
   // Payment operations
   getPayments(limit?: number): Promise<Payment[]>;
   getPaymentsByStudentId(studentId: string): Promise<Payment[]>;
   createPayment(payment: InsertPayment): Promise<Payment>;
-  
+
   // Processing functions
   processPayment(paymentData: PaymentProcess): Promise<Payment>;
-  
+
   // CSV operations
   importStudents(students: InsertStudent[]): Promise<Student[]>;
 }
@@ -53,7 +53,18 @@ export interface IStorage {
 export class DatabaseStorage implements IStorage {
   // Student operations
   async getStudents(): Promise<Student[]> {
-    return db.select().from(students);
+    let retries = 3;
+    while (retries > 0) {
+      try {
+        const result = await db.select().from(students);
+        return result;
+      } catch (error) {
+        retries--;
+        if (retries === 0) throw error;
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    }
+    throw new Error("Failed to fetch students after retries");
   }
 
   async getStudentById(id: number): Promise<Student | undefined> {
@@ -76,7 +87,7 @@ export class DatabaseStorage implements IStorage {
       clearCover: student.clearCover === undefined ? false : student.clearCover,
       photoPockets: student.photoPockets === undefined ? false : student.photoPockets,
     };
-    
+
     const result = await db.insert(students).values(studentData).returning();
     return result[0];
   }
@@ -90,7 +101,7 @@ export class DatabaseStorage implements IStorage {
     const result = await db.delete(students).where(eq(students.id, id)).returning({ id: students.id });
     return result.length > 0;
   }
-  
+
   // Action logs operations
   async getLogs(limit?: number): Promise<ActionLog[]> {
     if (limit) {
@@ -110,7 +121,7 @@ export class DatabaseStorage implements IStorage {
     const result = await db.insert(actionLogs).values(log).returning();
     return result[0];
   }
-  
+
   // Distribution operations
   async getDistributions(limit?: number): Promise<Distribution[]> {
     if (limit) {
@@ -144,10 +155,10 @@ export class DatabaseStorage implements IStorage {
       })
       .where(eq(distributions.id, id))
       .returning();
-    
+
     return result[0];
   }
-  
+
   // Payment operations
   async getPayments(limit?: number): Promise<Payment[]> {
     if (limit) {
@@ -168,14 +179,14 @@ export class DatabaseStorage implements IStorage {
     return db.transaction(async (tx) => {
       // Insert the payment
       const [newPayment] = await tx.insert(payments).values(payment).returning();
-      
+
       // Update student balance
       const [student] = await tx.select().from(students).where(eq(students.studentId, payment.studentId));
-      
+
       if (student) {
         const balance = parseFloat(student.balanceDue.toString());
         const paid = parseFloat(payment.amountPaid.toString());
-        
+
         if (balance - paid <= 0) {
           await tx.update(students)
             .set({
@@ -191,11 +202,11 @@ export class DatabaseStorage implements IStorage {
             .where(eq(students.id, student.id));
         }
       }
-      
+
       return newPayment;
     });
   }
-  
+
   // Processing functions
   async processPayment(paymentData: PaymentProcess): Promise<Payment> {
     // Calculate total amount received
@@ -207,13 +218,13 @@ export class DatabaseStorage implements IStorage {
       bills.twenty * 20 +
       bills.fifty * 50 +
       bills.hundred * 100;
-    
+
     // Calculate change due
     const changeDue = totalReceived - paymentData.amountDue;
-    
+
     // Calculate change bills breakdown
     const changeBills = this.calculateChange(changeDue);
-    
+
     // Create payment record
     const payment: InsertPayment = {
       studentId: paymentData.studentId,
@@ -223,10 +234,10 @@ export class DatabaseStorage implements IStorage {
       changeDue: changeDue.toString(), // Convert to string for numeric DB field
       changeBills
     };
-    
+
     return this.createPayment(payment);
   }
-  
+
   // Calculate change bills breakdown
   private calculateChange(amount: number): Record<string, number> {
     let remaining = amount;
@@ -238,42 +249,42 @@ export class DatabaseStorage implements IStorage {
       five: 0,
       one: 0
     };
-    
+
     // Calculate number of each bill denomination needed
     if (remaining >= 100) {
       result.hundred = Math.floor(remaining / 100);
       remaining %= 100;
     }
-    
+
     if (remaining >= 50) {
       result.fifty = Math.floor(remaining / 50);
       remaining %= 50;
     }
-    
+
     if (remaining >= 20) {
       result.twenty = Math.floor(remaining / 20);
       remaining %= 20;
     }
-    
+
     if (remaining >= 10) {
       result.ten = Math.floor(remaining / 10);
       remaining %= 10;
     }
-    
+
     if (remaining >= 5) {
       result.five = Math.floor(remaining / 5);
       remaining %= 5;
     }
-    
+
     result.one = Math.floor(remaining);
-    
+
     return result;
   }
-  
+
   // CSV operations
   async importStudents(studentsToImport: InsertStudent[]): Promise<Student[]> {
     const imported: Student[] = [];
-    
+
     // Use transaction for batch processing
     await db.transaction(async (tx) => {
       for (const student of studentsToImport) {
@@ -281,9 +292,9 @@ export class DatabaseStorage implements IStorage {
         const existingResult = await tx.select()
           .from(students)
           .where(eq(students.studentId, student.studentId));
-        
+
         const existing = existingResult[0];
-        
+
         // Ensure boolean fields have proper default values
         const studentData = {
           ...student,
@@ -293,26 +304,26 @@ export class DatabaseStorage implements IStorage {
           clearCover: student.clearCover === undefined ? false : student.clearCover,
           photoPockets: student.photoPockets === undefined ? false : student.photoPockets,
         };
-        
+
         if (existing) {
           // Update existing student
           const [updated] = await tx.update(students)
             .set(studentData)
             .where(eq(students.id, existing.id))
             .returning();
-          
+
           if (updated) imported.push(updated);
         } else {
           // Create new student
           const [created] = await tx.insert(students)
             .values(studentData)
             .returning();
-          
+
           imported.push(created);
         }
       }
     });
-    
+
     return imported;
   }
 }
