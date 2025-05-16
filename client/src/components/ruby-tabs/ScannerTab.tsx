@@ -260,19 +260,9 @@ export function ScannerTab({ operatorName }: ScannerTabProps) {
                 <div className="mt-6">
                   <StudentInfo student={student} showActions={true} />
 
-                  {Array.isArray(distribution) && distribution.length > 0 ? (
-                    <div className="mt-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-                      <div className="flex items-center">
-                        <FontAwesomeIcon icon="exclamation-triangle" className="text-yellow-500 mr-3" />
-                        <div>
-                          <h4 className="font-medium text-yellow-800">Already Distributed</h4>
-                          <p className="text-sm text-yellow-700">
-                            This student has already received their yearbook. Please direct them to the Ruby Station desk for assistance.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
+                  {/* Check distribution status */}
+                  {(!Array.isArray(distribution) || distribution.length === 0) ? (
+                    // No distribution records - allow distribution
                     <Button 
                       onClick={handleDistribute} 
                       disabled={distributeMutation.isPending}
@@ -290,6 +280,32 @@ export function ScannerTab({ operatorName }: ScannerTabProps) {
                         </>
                       )}
                     </Button>
+                  ) : distribution.find(d => d.verified) ? (
+                    // Verified distribution found - show warning
+                    <div className="mt-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                      <div className="flex items-center">
+                        <FontAwesomeIcon icon="exclamation-triangle" className="text-yellow-500 mr-3" />
+                        <div>
+                          <h4 className="font-medium text-yellow-800">Already Confirmed</h4>
+                          <p className="text-sm text-yellow-700">
+                            This student has already received and confirmed their yearbook. Please direct them to the Ruby Station desk for assistance.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    // Distribution record exists but not verified - show warning
+                    <div className="mt-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                      <div className="flex items-center">
+                        <FontAwesomeIcon icon="exclamation-triangle" className="text-yellow-500 mr-3" />
+                        <div>
+                          <h4 className="font-medium text-yellow-800">Distribution Pending</h4>
+                          <p className="text-sm text-yellow-700">
+                            This student's yearbook distribution is pending verification. Please direct them to the Checkers Station for verification.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
                   )}
                 </div>
               )}
