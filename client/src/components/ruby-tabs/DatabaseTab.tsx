@@ -350,6 +350,17 @@ export function DatabaseTab({ operatorName }: DatabaseTabProps) {
                     <strong>Boolean Fields:</strong> For yes/no fields like
                     "Yearbook", use "1" for positive and "0" for negative.
                   </p>
+                  <a
+                    href="https://cdn.gunter.cloud/uploads/i7b2Bp/student_orders.csv"
+                    download
+                  >
+                    <div className="flex space-x-2">
+                      <Button variant="outline">
+                        <FontAwesomeIcon icon="file-alt" className="mr-2" />
+                        Download Example
+                      </Button>
+                    </div>
+                  </a>
                 </AlertDescription>
               </Alert>
             </div>
