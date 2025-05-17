@@ -60,10 +60,6 @@ export function DataTab() {
   const [mapping, setMapping] = useState<{[key: string]: string}>({});
   const [isImporting, setIsImporting] = useState(false);
   
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(1);
-  const studentsPerPage = 10;
-  
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
