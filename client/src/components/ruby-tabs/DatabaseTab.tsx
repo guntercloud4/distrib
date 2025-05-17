@@ -69,7 +69,7 @@ export function DatabaseTab({ operatorName }: DatabaseTabProps) {
   const [mapping, setMapping] = useState<{ [key: string]: string }>({});
   const [isImporting, setIsImporting] = useState(false);
   const [showWipeDialog, setShowWipeDialog] = useState(false);
-  const [hasBackup, setHasBackup] = useState(false);
+  const [confirmText, setConfirmText] = useState("");
   const [isWiping, setIsWiping] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -181,7 +181,7 @@ export function DatabaseTab({ operatorName }: DatabaseTabProps) {
       });
       queryClient.invalidateQueries({ queryKey: ["/api/students"] });
       setShowWipeDialog(false);
-      setHasBackup(false);
+      setConfirmText("");
       setIsWiping(false);
     },
     onError: (error: Error) => {
@@ -444,12 +444,9 @@ export function DatabaseTab({ operatorName }: DatabaseTabProps) {
                           document.body.removeChild(a);
                           URL.revokeObjectURL(url);
                           
-                          // Set hasBackup to true after successful export
-                          setHasBackup(true);
-                          
                           toast({
                             title: "Export Complete",
-                            description: "Student data has been exported to CSV. You can now wipe the database if needed.",
+                            description: "Student data has been exported to CSV.",
                           });
                         }
                       }}
@@ -472,14 +469,7 @@ export function DatabaseTab({ operatorName }: DatabaseTabProps) {
                         variant="destructive" 
                         disabled={!students?.length}
                         onClick={() => {
-                          if (!hasBackup) {
-                            toast({
-                              title: "Backup Required",
-                              description: "You must download a CSV backup before wiping the database.",
-                              variant: "destructive",
-                            });
-                            return;
-                          }
+                          setConfirmText("");
                           setShowWipeDialog(true);
                         }}
                       >
@@ -508,21 +498,37 @@ export function DatabaseTab({ operatorName }: DatabaseTabProps) {
                 <p className="text-yellow-800 font-medium">Warning:</p>
                 <p className="text-yellow-700 text-sm">
                   All student data, distributions, and payment records will be permanently 
-                  deleted. Make sure you have downloaded a backup.
+                  deleted. It is strongly recommended to export a backup first.
                 </p>
+              </div>
+
+              <div className="mt-4">
+                <p className="font-medium mb-2">To confirm, please type:</p>
+                <p className="text-sm italic mb-2">"Yes I am sure I want to wipe the database."</p>
+                <Input 
+                  type="text" 
+                  value={confirmText}
+                  onChange={(e) => setConfirmText(e.target.value)}
+                  className={`${confirmText === "Yes I am sure I want to wipe the database." ? "border-green-500" : "border-gray-300"}`}
+                  placeholder="Type confirmation text here"
+                />
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isWiping}>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              disabled={isWiping}
+              disabled={isWiping || confirmText !== "Yes I am sure I want to wipe the database."}
               onClick={(e) => {
                 e.preventDefault();
                 setIsWiping(true);
                 wipeDbMutation.mutate();
               }}
-              className="bg-red-600 text-white hover:bg-red-700"
+              className={`${
+                confirmText === "Yes I am sure I want to wipe the database." 
+                  ? "bg-red-600 text-white hover:bg-red-700" 
+                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
+              }`}
             >
               {isWiping ? (
                 <>
@@ -532,7 +538,7 @@ export function DatabaseTab({ operatorName }: DatabaseTabProps) {
               ) : (
                 <>
                   <FontAwesomeIcon icon="trash-alt" className="mr-2" />
-                  Yes, Wipe Database
+                  Wipe Database
                 </>
               )}
             </AlertDialogAction>
