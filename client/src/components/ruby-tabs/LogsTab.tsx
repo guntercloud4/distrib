@@ -61,6 +61,7 @@ export function LogsTab({ operatorName }: LogsTabProps) {
     if (!searchTerm) return true;
     
     const searchLower = searchTerm.toLowerCase();
+    // Ensure we have valid string properties before searching them
     return (
       log.studentId?.toLowerCase().includes(searchLower) ||
       log.action.toLowerCase().includes(searchLower) ||

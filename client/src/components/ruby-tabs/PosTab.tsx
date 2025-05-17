@@ -8,6 +8,7 @@ import { Student, PaymentProcess } from "@shared/schema";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { socketProvider } from "@/lib/socket";
 
 interface PosTabProps {
   operatorName: string;
@@ -147,6 +148,12 @@ export function PosTab({ operatorName }: PosTabProps) {
           balanceDue: foundStudent?.balanceDue || "0"
         },
         payment: data
+      });
+      
+      // Send WebSocket notification for real-time updates
+      socketProvider.send({
+        type: 'NEW_PAYMENT',
+        data
       });
       
       // Create a distribution and mark it as verified immediately
