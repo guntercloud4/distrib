@@ -622,5 +622,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   );
 
+  // Wipe all students from the database
+  app.delete("/api/database/wipe", async (req: Request, res: Response) => {
+    try {
+      const { operatorName } = req.body;
+      
+      if (!operatorName) {
+        return res.status(400).json({ error: "Operator name is required" });
+      }
+      
+      // Get all students first to record in log
+      const students = await storage.getStudents();
+      
+      if (!students || students.length === 0) {
+        return res.status(404).json({ error: "No students found to delete" });
+      }
+      
+      // Track success/failure
+      let successCount = 0;
+      let errors = [];
+      
+      // Delete each student
+      for (const student of students) {
+        try {
+          const deleted = await storage.deleteStudent(student.id);
+          if (deleted) {
+            successCount++;
+          } else {
+            errors.push(`Failed to delete student ID: ${student.id}`);
+          }
+        } catch (err) {
+          errors.push(`Error deleting student ID ${student.id}: ${err}`);
+        }
+      }
+      
+      // Log the mass deletion
+      await storage.createLog({
+        action: "WIPE_DATABASE",
+        details: { 
+          totalStudents: students.length,
+          successfullyDeleted: successCount,
+          errors: errors.length > 0 ? errors : undefined
+        },
+        stationName: "Ruby Station",
+        operatorName: operatorName,
+      });
+      
+      res.json({ 
+        success: true,
+        totalStudents: students.length,
+        deleted: successCount,
+        errors: errors.length
+      });
+    } catch (error) {
+      console.error("Error wiping database:", error);
+      res.status(500).json({ error: "Failed to wipe database" });
+    }
+  });
+
   return httpServer;
 }
