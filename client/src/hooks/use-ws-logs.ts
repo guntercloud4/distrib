@@ -66,7 +66,9 @@ export function useWsLogs() {
     socketProvider.onDisconnect(connectionHandler);
 
     return () => {
-      unsubscribe && unsubscribe();
+      if (typeof unsubscribe === 'function') {
+        unsubscribe();
+      }
       socketProvider.offConnect(connectionHandler);
       socketProvider.offDisconnect(connectionHandler);
     };
