@@ -68,12 +68,14 @@ export function CashStation({ operatorName, onLogout }: CashStationProps) {
       // Invalidate queries to refetch data
       queryClient.invalidateQueries({ queryKey: ['/api/payments'] });
       queryClient.invalidateQueries({ queryKey: ['/api/students'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/logs'] });
       
-      // Send WebSocket notification
-      socketProvider.send({
-        type: 'NEW_PAYMENT',
-        data
-      });
+      // We no longer need to send the WebSocket notification manually since the server does it
+      // Keep this commented line for reference
+      // socketProvider.send({
+      //   type: 'NEW_PAYMENT',
+      //   data
+      // });
       
       // Show payment result
       setPaymentResult(data);

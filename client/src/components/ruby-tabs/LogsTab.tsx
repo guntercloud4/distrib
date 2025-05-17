@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ActionLog } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
+import { useWsLogs } from "@/hooks/use-ws-logs";
 
 interface LogsTabProps {
   operatorName: string;
@@ -33,20 +34,30 @@ export function LogsTab({ operatorName }: LogsTabProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedLog, setSelectedLog] = useState<ActionLog | null>(null);
   const [showDetailDialog, setShowDetailDialog] = useState(false);
+  const queryClient = useQueryClient();
   
-  // Fetch logs
+  // Get logs from WebSocket
   const { 
-    data: logs, 
-    isLoading: logsLoading,
-    isError: logsError,
-    refetch
-  } = useQuery<ActionLog[]>({
-    queryKey: ['/api/logs'],
-    staleTime: 5000,
+    logs, 
+    formattedLogs, 
+    isConnected 
+  } = useWsLogs();
+  
+  const logsLoading = logs.length === 0 && !isConnected;
+  const logsError = !isConnected && logs.length === 0;
+  
+  // Function to refresh logs
+  const refetch = () => {
+    queryClient.invalidateQueries({ queryKey: ['/api/logs'] });
+  };
+  
+  // Convert WebSocket logs format to ActionLog format for consistency
+  const convertedLogs = logs.map(log => {
+    return log.data as ActionLog;
   });
   
   // Filter logs based on search term
-  const filteredLogs = logs?.filter(log => {
+  const filteredLogs = convertedLogs.filter(log => {
     if (!searchTerm) return true;
     
     const searchLower = searchTerm.toLowerCase();
