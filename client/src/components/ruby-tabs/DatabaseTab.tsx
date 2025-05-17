@@ -14,6 +14,16 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Form,
   FormControl,
   FormDescription,
@@ -58,6 +68,9 @@ export function DatabaseTab({ operatorName }: DatabaseTabProps) {
   const [headers, setHeaders] = useState<string[]>([]);
   const [mapping, setMapping] = useState<{ [key: string]: string }>({});
   const [isImporting, setIsImporting] = useState(false);
+  const [showWipeDialog, setShowWipeDialog] = useState(false);
+  const [hasBackup, setHasBackup] = useState(false);
+  const [isWiping, setIsWiping] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -151,6 +164,33 @@ export function DatabaseTab({ operatorName }: DatabaseTabProps) {
         variant: "destructive",
       });
       setIsImporting(false);
+    },
+  });
+  
+  // Wipe database mutation
+  const wipeDbMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("DELETE", "/api/database/wipe", { operatorName });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Database wiped successfully",
+        description: `Successfully deleted ${data.deleted} of ${data.totalStudents} students.`,
+        variant: data.errors > 0 ? "destructive" : "default",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/students"] });
+      setShowWipeDialog(false);
+      setHasBackup(false);
+      setIsWiping(false);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to wipe database",
+        description: error.message,
+        variant: "destructive",
+      });
+      setIsWiping(false);
     },
   });
 
@@ -404,9 +444,12 @@ export function DatabaseTab({ operatorName }: DatabaseTabProps) {
                           document.body.removeChild(a);
                           URL.revokeObjectURL(url);
                           
+                          // Set hasBackup to true after successful export
+                          setHasBackup(true);
+                          
                           toast({
                             title: "Export Complete",
-                            description: "Student data has been exported to CSV.",
+                            description: "Student data has been exported to CSV. You can now wipe the database if needed.",
                           });
                         }
                       }}
@@ -417,13 +460,85 @@ export function DatabaseTab({ operatorName }: DatabaseTabProps) {
                     </div>
                   </div>
 
-                  
+                  <div className="mt-6 border-t border-neutral-200 pt-4">
+                    <h5 className="text-sm font-medium mb-2">
+                      Database Management
+                    </h5>
+                    <p className="text-neutral-600 text-sm mb-3">
+                      Advanced database options. Please use with caution.
+                    </p>
+                    <div className="flex space-x-2">
+                      <Button 
+                        variant="destructive" 
+                        disabled={!students?.length}
+                        onClick={() => {
+                          if (!hasBackup) {
+                            toast({
+                              title: "Backup Required",
+                              description: "You must download a CSV backup before wiping the database.",
+                              variant: "destructive",
+                            });
+                            return;
+                          }
+                          setShowWipeDialog(true);
+                        }}
+                      >
+                        <FontAwesomeIcon icon="trash-alt" className="mr-2" />
+                        Wipe Database
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </CardContent>
       </Card>
+      
+      {/* Confirmation Dialog for Database Wipe */}
+      <AlertDialog open={showWipeDialog} onOpenChange={setShowWipeDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete all student 
+              records from the database.
+              
+              <div className="mt-2 bg-yellow-50 border border-yellow-200 p-3 rounded-md">
+                <p className="text-yellow-800 font-medium">Warning:</p>
+                <p className="text-yellow-700 text-sm">
+                  All student data, distributions, and payment records will be permanently 
+                  deleted. Make sure you have downloaded a backup.
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isWiping}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isWiping}
+              onClick={(e) => {
+                e.preventDefault();
+                setIsWiping(true);
+                wipeDbMutation.mutate();
+              }}
+              className="bg-red-600 text-white hover:bg-red-700"
+            >
+              {isWiping ? (
+                <>
+                  <FontAwesomeIcon icon="spinner" spin className="mr-2" />
+                  Wiping...
+                </>
+              ) : (
+                <>
+                  <FontAwesomeIcon icon="trash-alt" className="mr-2" />
+                  Yes, Wipe Database
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Add Student Dialog */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>

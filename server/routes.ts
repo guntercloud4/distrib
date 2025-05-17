@@ -12,6 +12,7 @@ import {
   insertPaymentSchema,
   paymentProcessSchema,
   csvMappingSchema,
+  Distribution,
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -596,7 +597,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Broadcast as verified distribution event
           broadcastMessage({
             type: "VERIFY_DISTRIBUTION",
-            data: verifiedDistribution as Distribution,
+            data: verifiedDistribution,
           });
         } else {
           // Fallback to broadcast as regular distribution if verification failed
