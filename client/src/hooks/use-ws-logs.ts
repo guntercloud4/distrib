@@ -2,11 +2,37 @@ import { useState, useEffect } from "react";
 import { socketProvider } from "@/lib/socket";
 import { ActionLog, Distribution, Payment } from "@shared/schema";
 
+// Store logs in a shared state outside the hook
+const sharedLogs: any[] = [];
+let isInitialized = false;
+
 export function useWsLogs() {
-  const [logs, setLogs] = useState<any[]>([]);
-  const [isConnected, setIsConnected] = useState(false);
+  const [logs, setLogs] = useState<any[]>(sharedLogs);
+  const [isConnected, setIsConnected] = useState(socketProvider.isConnected());
 
   useEffect(() => {
+    // Only initialize once from the API
+    if (!isInitialized) {
+      isInitialized = true;
+      
+      // Initial fetch of logs from API
+      fetch("/api/logs?limit=50")
+        .then((res) => res.json())
+        .then((data) => {
+          const initialLogs = data.map((log: ActionLog) => ({
+            type: log.action,
+            data: log,
+            timestamp: new Date(log.timestamp)
+          }));
+          
+          // Update shared logs and component state
+          sharedLogs.length = 0;
+          sharedLogs.push(...initialLogs);
+          setLogs([...sharedLogs]);
+        })
+        .catch((err) => console.error("Failed to fetch logs:", err));
+    }
+    
     // Subscribe to all message types
     const unsubscribe = socketProvider.subscribe("all", (message) => {
       setIsConnected(true);
@@ -14,35 +40,35 @@ export function useWsLogs() {
       // Skip PING messages
       if (message.type === "PING") return;
       
-      setLogs((prevLogs) => {
-        // Add the new log at the beginning
-        return [
-          {
-            type: message.type,
-            data: message.data,
-            timestamp: new Date()
-          },
-          ...prevLogs.slice(0, 99) // Keep only the latest 100 logs
-        ];
-      });
+      // Add the new log at the beginning of shared logs
+      const newLog = {
+        type: message.type,
+        data: message.data,
+        timestamp: new Date()
+      };
+      
+      // Update shared logs
+      sharedLogs.unshift(newLog);
+      if (sharedLogs.length > 100) {
+        sharedLogs.pop(); // Keep only latest 100
+      }
+      
+      // Update component state
+      setLogs([...sharedLogs]);
     });
-
-    // Initial fetch of logs from API
-    fetch("/api/logs?limit=50")
-      .then((res) => res.json())
-      .then((data) => {
-        setLogs(
-          data.map((log: ActionLog) => ({
-            type: log.action,
-            data: log,
-            timestamp: new Date(log.timestamp)
-          }))
-        );
-      })
-      .catch((err) => console.error("Failed to fetch logs:", err));
+    
+    // Ensure component state stays in sync with shared logs
+    setLogs([...sharedLogs]);
+    
+    // Update connection state
+    const connectionHandler = () => setIsConnected(socketProvider.isConnected());
+    socketProvider.onConnect(connectionHandler);
+    socketProvider.onDisconnect(connectionHandler);
 
     return () => {
-      unsubscribe();
+      unsubscribe && unsubscribe();
+      socketProvider.offConnect(connectionHandler);
+      socketProvider.offDisconnect(connectionHandler);
     };
   }, []);
 

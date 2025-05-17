@@ -1,13 +1,41 @@
 type MessageHandler = (message: any) => void;
+type ConnectionHandler = () => void;
 
 class SocketProvider {
   private socket: WebSocket | null = null;
   private subscriptions: Record<string, Set<MessageHandler>> = {};
+  private connectHandlers: Set<ConnectionHandler> = new Set();
+  private disconnectHandlers: Set<ConnectionHandler> = new Set();
   private isConnecting: boolean = false;
   private retryCount: number = 0;
   private maxRetries: number = 5;
   private retryDelay: number = 2000;
   
+  // Check if socket is connected
+  isConnected(): boolean {
+    return this.socket?.readyState === WebSocket.OPEN;
+  }
+  
+  // Register connection handler
+  onConnect(handler: ConnectionHandler): void {
+    this.connectHandlers.add(handler);
+  }
+  
+  // Unregister connection handler
+  offConnect(handler: ConnectionHandler): void {
+    this.connectHandlers.delete(handler);
+  }
+  
+  // Register disconnection handler
+  onDisconnect(handler: ConnectionHandler): void {
+    this.disconnectHandlers.add(handler);
+  }
+  
+  // Unregister disconnection handler
+  offDisconnect(handler: ConnectionHandler): void {
+    this.disconnectHandlers.delete(handler);
+  }
+    
   // Connect to the WebSocket server
   connect(): void {
     if (this.socket?.readyState === WebSocket.OPEN || this.isConnecting) {
@@ -27,6 +55,9 @@ class SocketProvider {
       console.log("WebSocket connection established");
       this.isConnecting = false;
       this.retryCount = 0;
+      
+      // Notify connection handlers
+      this.connectHandlers.forEach(handler => handler());
     };
     
     this.socket.onmessage = (event) => {
@@ -42,6 +73,9 @@ class SocketProvider {
       console.log("WebSocket connection closed");
       this.socket = null;
       this.isConnecting = false;
+      
+      // Notify disconnection handlers
+      this.disconnectHandlers.forEach(handler => handler());
       
       if (this.retryCount < this.maxRetries) {
         this.retryCount++;
@@ -75,12 +109,17 @@ class SocketProvider {
   }
   
   // Subscribe to a specific message type
-  subscribe(type: string, handler: MessageHandler): void {
+  subscribe(type: string, handler: MessageHandler): () => void {
     if (!this.subscriptions[type]) {
       this.subscriptions[type] = new Set();
     }
     
     this.subscriptions[type].add(handler);
+    
+    // Return an unsubscribe function
+    return () => {
+      this.unsubscribe(type, handler);
+    };
   }
   
   // Unsubscribe from a specific message type
