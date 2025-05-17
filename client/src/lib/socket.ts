@@ -94,8 +94,16 @@ class SocketProvider {
   private handleMessage(message: any): void {
     const { type } = message;
     
+    // First handle specific type subscribers
     if (type && this.subscriptions[type]) {
       this.subscriptions[type].forEach(handler => {
+        handler(message);
+      });
+    }
+    
+    // Then handle "all" subscribers who want all message types
+    if (this.subscriptions["all"]) {
+      this.subscriptions["all"].forEach(handler => {
         handler(message);
       });
     }
@@ -104,3 +112,6 @@ class SocketProvider {
 
 // Export a singleton instance
 export const socketProvider = new SocketProvider();
+
+// Connect immediately when this module is imported
+socketProvider.connect();
