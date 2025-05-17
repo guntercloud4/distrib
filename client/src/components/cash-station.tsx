@@ -10,6 +10,7 @@ import { PaymentForm } from "@/components/payment-form";
 import { PaymentResult } from "@/components/payment-result";
 import { RecentActivity } from "@/components/recent-activity";
 import { socketProvider } from "@/lib/socket";
+import { useWsLogs } from "@/hooks/use-ws-logs";
 
 interface CashStationProps {
   operatorName: string;
@@ -23,16 +24,38 @@ export function CashStation({ operatorName, onLogout }: CashStationProps) {
   const [paymentResult, setPaymentResult] = useState<any>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { formattedLogs } = useWsLogs();
 
   // Fetch student data when scanned
-  const { data: student, isLoading, isError, error, remove } = useQuery<Student>({
+  const { 
+    data: student, 
+    isLoading, 
+    isError, 
+    error,
+    refetch
+  } = useQuery({
     queryKey: ['/api/students', studentId],
+    queryFn: async () => {
+      if (!studentId) return undefined;
+      try {
+        const res = await fetch(`/api/students/${studentId}`);
+        if (!res.ok) {
+          if (res.status === 404) {
+            return undefined;
+          }
+          throw new Error(`Failed to fetch student: ${res.status}`);
+        }
+        const data = await res.json();
+        setStudentName(`${data.firstName} ${data.lastName}`);
+        return data as Student;
+      } catch (err) {
+        console.error("Error fetching student:", err);
+        throw err;
+      }
+    },
     enabled: !!studentId,
     retry: false,
-    staleTime: 0,
-    onSuccess: (data) => {
-      setStudentName(`${data.firstName} ${data.lastName}`);
-    }
+    staleTime: 0
   });
 
   // Handle payment processing
@@ -104,7 +127,7 @@ export function CashStation({ operatorName, onLogout }: CashStationProps) {
     setPaymentResult(null);
     setStudentId("");
     setStudentName("");
-    remove();
+    refetch();
   };
 
   return (
@@ -147,7 +170,44 @@ export function CashStation({ operatorName, onLogout }: CashStationProps) {
               onNewPayment={resetPayment}
             />
           ) : (
-            <RecentActivity stationType="cash" />
+            <Card>
+              <CardContent className="p-6">
+                <h3 className="text-lg font-medium text-neutral-800 mb-4">Recent Payments</h3>
+                <div className="space-y-4 max-h-[350px] overflow-y-auto">
+                  {formattedLogs.filter(log => log.data.action === 'NEW_PAYMENT').length > 0 ? (
+                    formattedLogs
+                      .filter(log => log.data.action === 'NEW_PAYMENT')
+                      .slice(0, 10)
+                      .map((log, index) => (
+                        <div key={index} className="flex items-start space-x-3 pb-3 border-b border-neutral-100">
+                          <div className="flex-shrink-0 h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
+                            <span className="material-icons text-green-600 text-sm">payments</span>
+                          </div>
+                          <div>
+                            <p className="text-sm text-neutral-800">
+                              <span className="font-medium">Received:</span> {formatCurrency(log.data.amountPaid)}
+                            </p>
+                            <p className="text-xs text-neutral-700">
+                              From: {log.data.studentName || log.data.studentId}
+                            </p>
+                            <p className="text-xs text-neutral-500">
+                              {new Date(log.timestamp).toLocaleTimeString()} by {log.data.operatorName}
+                            </p>
+                          </div>
+                        </div>
+                      ))
+                  ) : (
+                    <div className="text-center py-8">
+                      <div className="bg-neutral-100 rounded-full h-12 w-12 flex items-center justify-center mx-auto mb-3">
+                        <span className="material-icons text-neutral-400">info</span>
+                      </div>
+                      <p className="text-sm text-neutral-600">No payment activity yet.</p>
+                      <p className="text-xs text-neutral-500 mt-1">Recent payments will appear here.</p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           )}
         </div>
       </div>
