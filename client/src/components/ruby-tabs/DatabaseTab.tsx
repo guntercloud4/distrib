@@ -13,16 +13,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+
 import {
   Form,
   FormControl,
@@ -69,7 +60,6 @@ export function DatabaseTab({ operatorName }: DatabaseTabProps) {
   const [mapping, setMapping] = useState<{ [key: string]: string }>({});
   const [isImporting, setIsImporting] = useState(false);
   const [showWipeDialog, setShowWipeDialog] = useState(false);
-  const [confirmText, setConfirmText] = useState("");
   const [isWiping, setIsWiping] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -181,7 +171,6 @@ export function DatabaseTab({ operatorName }: DatabaseTabProps) {
       });
       queryClient.invalidateQueries({ queryKey: ["/api/students"] });
       setShowWipeDialog(false);
-      setConfirmText("");
       setIsWiping(false);
     },
     onError: (error: Error) => {
@@ -469,7 +458,6 @@ export function DatabaseTab({ operatorName }: DatabaseTabProps) {
                         variant="destructive" 
                         disabled={!students?.length}
                         onClick={() => {
-                          setConfirmText("");
                           setShowWipeDialog(true);
                         }}
                       >
@@ -486,11 +474,11 @@ export function DatabaseTab({ operatorName }: DatabaseTabProps) {
       </Card>
       
       {/* Confirmation Dialog for Database Wipe */}
-      <AlertDialog open={showWipeDialog} onOpenChange={setShowWipeDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription>
+      <Dialog open={showWipeDialog} onOpenChange={setShowWipeDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Are you absolutely sure?</DialogTitle>
+            <DialogDescription>
               This action cannot be undone. This will permanently delete all student 
               records from the database.
               
@@ -501,34 +489,20 @@ export function DatabaseTab({ operatorName }: DatabaseTabProps) {
                   deleted. It is strongly recommended to export a backup first.
                 </p>
               </div>
-
-              <div className="mt-4">
-                <p className="font-medium mb-2">To confirm, please type:</p>
-                <p className="text-sm italic mb-2">"Yes I am sure I want to wipe the database."</p>
-                <Input 
-                  type="text" 
-                  value={confirmText}
-                  onChange={(e) => setConfirmText(e.target.value)}
-                  className={`${confirmText === "Yes I am sure I want to wipe the database." ? "border-green-500" : "border-gray-300"}`}
-                  placeholder="Type confirmation text here"
-                />
-              </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isWiping}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              disabled={isWiping || confirmText !== "Yes I am sure I want to wipe the database."}
-              onClick={(e) => {
-                e.preventDefault();
+            </DialogDescription>
+          </DialogHeader>
+          
+          <DialogFooter>
+            <Button variant="outline" disabled={isWiping} onClick={() => setShowWipeDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={isWiping}
+              onClick={() => {
                 setIsWiping(true);
                 wipeDbMutation.mutate();
               }}
-              className={`${
-                confirmText === "Yes I am sure I want to wipe the database." 
-                  ? "bg-red-600 text-white hover:bg-red-700" 
-                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
-              }`}
             >
               {isWiping ? (
                 <>
@@ -541,10 +515,10 @@ export function DatabaseTab({ operatorName }: DatabaseTabProps) {
                   Wipe Database
                 </>
               )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Add Student Dialog */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
