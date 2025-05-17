@@ -61,13 +61,9 @@ export function LogsTab({ operatorName }: LogsTabProps) {
     if (!searchTerm) return true;
     
     const searchLower = searchTerm.toLowerCase();
-    // Ensure we have valid string properties before searching them
-    return (
-      log.studentId?.toLowerCase().includes(searchLower) ||
-      log.action.toLowerCase().includes(searchLower) ||
-      log.operatorName.toLowerCase().includes(searchLower) ||
-      log.details?.toLowerCase().includes(searchLower)
-    );
+    // Convert the log to a string to search all properties safely
+    const logString = JSON.stringify(log).toLowerCase();
+    return logString.includes(searchLower);
   });
   
   // Sort logs by timestamp (newest first)
