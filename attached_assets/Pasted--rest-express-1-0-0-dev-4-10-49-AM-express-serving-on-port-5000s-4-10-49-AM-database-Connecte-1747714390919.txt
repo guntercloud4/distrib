@@ -1,0 +1,254 @@
+> rest-express@1.0.0 dev
+4:10:49 AM [express] serving on port 5000s
+4:10:49 AM [database] Connected to database
+4:10:49 AM [database] Database connection successful
+4:10:49 AM [database] Found 0 students in database
+Browserslist: browsers data (caniuse-lite) is 7 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+4:10:50 AM [database] Database tables already exist
+4:10:50 AM [express] Database initialized successfully. New tables created.
+4:10:58 AM [vite] hmr update /src/components/ruby-tabs/OperatorsTab.tsx, /src/index.css?v=PIvYsGWo7C047Dn9MnLrB
+4:11:09 AM [vite] hmr update /src/components/ruby-tabs/OperatorsTab.tsx, /src/index.css?v=PIvYsGWo7C047Dn9MnLrB (x2)
+4:11:16 AM [vite] hmr update /src/components/ruby-tabs/OperatorsTab.tsx, /src/index.css?v=PIvYsGWo7C047Dn9MnLrB (x3)
+4:11:24 AM [vite] hmr update /src/components/ruby-tabs/OperatorsTab.tsx, /src/index.css?v=PIvYsGWo7C047Dn9MnLrB (x4)
+Unexpected error on idle client error: terminating connection due to administrator command
+    at cn.parseErrorMessage (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1182:6)
+    at cn.handlePacket (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1143:13)
+    at cn.parse (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1127:36)
+    at v.<anonymous> (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1190:16)
+    at v.emit (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:397:12)
+    at WebSocket.<anonymous> (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:987:80)
+    at callListener (/home/runner/workspace/node_modules/ws/lib/event-target.js:290:14)
+    at WebSocket.onMessage (/home/runner/workspace/node_modules/ws/lib/event-target.js:209:9)
+    at WebSocket.emit (node:events:518:28)
+    at Receiver.receiverOnMessage (/home/runner/workspace/node_modules/ws/lib/websocket.js:1220:20)
+    at Receiver.emit (node:events:518:28)
+    at Receiver.dataMessage (/home/runner/workspace/node_modules/ws/lib/receiver.js:569:14)
+    at Receiver.getData (/home/runner/workspace/node_modules/ws/lib/receiver.js:496:10)
+    at Receiver.startLoop (/home/runner/workspace/node_modules/ws/lib/receiver.js:167:16)
+    at Receiver._write (/home/runner/workspace/node_modules/ws/lib/receiver.js:94:10)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at TLSSocket.socketOnData (/home/runner/workspace/node_modules/ws/lib/websocket.js:1355:35)
+    at TLSSocket.emit (node:events:518:28)
+    at addChunk (node:internal/streams/readable:561:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:512:3)
+    at Readable.push (node:internal/streams/readable:392:5)
+    at TLSWrap.onStreamRead (node:internal/stream_base_commons:191:23) {
+  length: 116,
+  severity: 'FATAL',
+  code: '57P01',
+  detail: undefined,
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'postgres.c',
+  line: '3289',
+  routine: 'ProcessInterrupts',
+  client: NeonClient {
+    _events: [Object: null prototype] { error: [Function (anonymous)] },
+    _eventsCount: 1,
+    _maxListeners: undefined,
+    connectionParameters: ConnectionParameters {
+      user: 'neondb_owner',
+      database: 'neondb',
+      port: 5432,
+      host: 'ep-ancient-lab-a5mn6v2g.us-east-2.aws.neon.tech',
+      binary: false,
+      options: undefined,
+      ssl: {},
+      client_encoding: '',
+      replication: undefined,
+      isDomainSocket: false,
+      application_name: undefined,
+      fallback_application_name: undefined,
+      statement_timeout: false,
+      lock_timeout: false,
+      idle_in_transaction_session_timeout: false,
+      query_timeout: false,
+      connect_timeout: 0,
+      keepalives: 1
+    },
+    user: 'neondb_owner',
+    database: 'neondb',
+    port: 5432,
+    host: 'ep-ancient-lab-a5mn6v2g.us-east-2.aws.neon.tech',
+    replication: undefined,
+    _Promise: [Function: Promise],
+    _types: TypeOverrides { _types: [Object], text: {}, binary: {} },
+    _ending: true,
+    _connecting: false,
+    _connected: true,
+    _connectionError: false,
+    _queryable: false,
+    connection: Connection {
+      _events: [Object: null prototype],
+      _eventsCount: 22,
+      _maxListeners: undefined,
+      stream: [Socket],
+      _keepAlive: true,
+      _keepAliveInitialDelayMillis: 0,
+      lastBuffer: false,
+      parsedStatements: {},
+      ssl: false,
+      _ending: false,
+      _emitMessage: false,
+      _connecting: true
+    },
+    queryQueue: [],
+    binary: false,
+    processID: 1020776414,
+    secretKey: 368810772,
+    ssl: false,
+    _connectionTimeoutMillis: 0,
+    config: {
+      connectionString: 'postgresql://neondb_owner:npg_eYPKOX5FZ2SI@ep-ancient-lab-a5mn6v2g.us-east-2.aws.neon.tech/neondb?sslmode=require',
+      ssl: true,
+      max: 10,
+      connectionTimeoutMillis: 0,
+      idleTimeoutMillis: 0,
+      allowExitOnIdle: false,
+      keepAlive: true,
+      maxUses: Infinity,
+      maxLifetimeSeconds: 0
+    },
+    _connectionCallback: null,
+    release: [Function (anonymous)],
+    activeQuery: null,
+    readyForQuery: true,
+    hasExecuted: true,
+    _poolUseCount: 3
+  }
+}
+4:12:18 AM [database] Connected to database
+Successfully retrieved 0 students
+4:12:18 AM [express] GET /api/students 200 in 689ms :: []
+Error in getOperators: error: relation "operators" does not exist
+    at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async NeonPreparedQuery.execute (/home/runner/workspace/node_modules/src/neon-serverless/session.ts:102:18)
+    at async DatabaseStorage.getOperators (/home/runner/workspace/server/storage.ts:68:14)
+    at async <anonymous> (/home/runner/workspace/server/routes.ts:750:28) {
+  length: 108,
+  severity: 'ERROR',
+  code: '42P01',
+  detail: undefined,
+  hint: undefined,
+  position: '65',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '1449',
+  routine: 'parserOpenTable'
+}
+Error fetching operators: Error: Failed to get operators
+    at DatabaseStorage.getOperators (/home/runner/workspace/server/storage.ts:71:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async <anonymous> (/home/runner/workspace/server/routes.ts:750:28)
+4:12:21 AM [express] GET /api/operators 500 in 76ms :: {"error":"Failed to fetch operators"}
+4:12:23 AM [database] Connected to database
+4:12:23 AM [express] GET /api/distributions 304 in 332ms :: []
+Error in getOperators: error: relation "operators" does not exist
+    at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async NeonPreparedQuery.execute (/home/runner/workspace/node_modules/src/neon-serverless/session.ts:102:18)
+    at async DatabaseStorage.getOperators (/home/runner/workspace/server/storage.ts:68:14)
+    at async <anonymous> (/home/runner/workspace/server/routes.ts:750:28) {
+  length: 108,
+  severity: 'ERROR',
+  code: '42P01',
+  detail: undefined,
+  hint: undefined,
+  position: '65',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '1449',
+  routine: 'parserOpenTable'
+}
+Error fetching operators: Error: Failed to get operators
+    at DatabaseStorage.getOperators (/home/runner/workspace/server/storage.ts:71:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async <anonymous> (/home/runner/workspace/server/routes.ts:750:28)
+4:12:23 AM [express] GET /api/operators 500 in 61ms :: {"error":"Failed to fetch operators"}
+4:12:24 AM [database] Connected to database
+Error in getOperators: error: relation "operators" does not exist
+    at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async NeonPreparedQuery.execute (/home/runner/workspace/node_modules/src/neon-serverless/session.ts:102:18)
+    at async DatabaseStorage.getOperators (/home/runner/workspace/server/storage.ts:68:14)
+    at async <anonymous> (/home/runner/workspace/server/routes.ts:750:28) {
+  length: 108,
+  severity: 'ERROR',
+  code: '42P01',
+  detail: undefined,
+  hint: undefined,
+  position: '65',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '1449',
+  routine: 'parserOpenTable'
+}
+Error fetching operators: Error: Failed to get operators
+    at DatabaseStorage.getOperators (/home/runner/workspace/server/storage.ts:71:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async <anonymous> (/home/runner/workspace/server/routes.ts:750:28)
+4:12:24 AM [express] GET /api/operators 500 in 254ms :: {"error":"Failed to fetch operators"}
+4:12:31 AM [database] Connected to database
+Error in getOperatorByName: error: relation "operators" does not exist
+    at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async NeonPreparedQuery.execute (/home/runner/workspace/node_modules/src/neon-serverless/session.ts:102:18)
+    at async DatabaseStorage.getOperatorByName (/home/runner/workspace/server/storage.ts:87:23)
+    at async <anonymous> (/home/runner/workspace/server/routes.ts:782:24) {
+  length: 108,
+  severity: 'ERROR',
+  code: '42P01',
+  detail: undefined,
+  hint: undefined,
+  position: '65',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '1449',
+  routine: 'parserOpenTable'
+}
+Error creating operator: Error: Failed to get operator by name
+    at DatabaseStorage.getOperatorByName (/home/runner/workspace/server/storage.ts:91:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async <anonymous> (/home/runner/workspace/server/routes.ts:782:24)
+4:12:31 AM [express] POST /api/operators 500 in 266ms :: {"error":"Failed to create operator"}
