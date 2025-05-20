@@ -476,43 +476,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Import students from CSV
   app.post("/api/students/import", async (req: Request, res: Response) => {
     try {
-      const { mappings, csvData, operatorName } = req.body;
+      const students = req.body;
+      
+      if (!Array.isArray(students)) {
+        return res.status(400).json({ 
+          error: "Expected array of students" 
+        });
+      }
 
-      // Validate mappings
-      const validMappings = csvMappingSchema.parse(mappings);
-
-      // Parse CSV data based on mappings
-      const parsedStudents = csvData.map((row: any) => {
-        return {
-          studentId: row[validMappings.studentIdField],
-          lastName: row[validMappings.lastNameField],
-          firstName: row[validMappings.firstNameField],
-          orderType: row[validMappings.orderTypeField],
-          orderNumber: row[validMappings.orderNumberField],
-          balanceDue: parseFloat(row[validMappings.balanceDueField]) || 0,
-          paymentStatus: row[validMappings.paymentStatusField],
-          yearbook: validMappings.yearbookField
-            ? row[validMappings.yearbookField] === "Yes"
-            : false,
-          personalization: validMappings.personalizationField
-            ? row[validMappings.personalizationField] === "Yes"
-            : false,
-          signaturePackage: validMappings.signaturePackageField
-            ? row[validMappings.signaturePackageField] === "Yes"
-            : false,
-          clearCover: validMappings.clearCoverField
-            ? row[validMappings.clearCoverField] === "Yes"
-            : false,
-          photoPockets: validMappings.photoPocketsField
-            ? row[validMappings.photoPocketsField] === "Yes"
-            : false,
-          orderEnteredDate: new Date(),
-          photoUrl: null,
-        };
-      });
-
-      // Import students
-      const importedStudents = await storage.importStudents(parsedStudents);
+      // Import students directly
+      const importedStudents = await storage.importStudents(students);
 
       // Log the action
       const actionLog = await storage.createLog({

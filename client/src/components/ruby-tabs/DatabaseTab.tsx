@@ -129,12 +129,8 @@ export function DatabaseTab({ operatorName }: DatabaseTabProps) {
 
   // Import students mutation
   const importStudentsMutation = useMutation({
-    mutationFn: async (data: {
-      mappings: Record<string, string>;
-      csvData: any[];
-      operatorName: string;
-    }) => {
-      const res = await apiRequest("POST", "/api/students/import", data);
+    mutationFn: async (studentsToImport: InsertStudent[]) => {
+      const res = await apiRequest("POST", "/api/students/import", studentsToImport);
       return res.json();
     },
     onSuccess: (data) => {
@@ -297,29 +293,27 @@ export function DatabaseTab({ operatorName }: DatabaseTabProps) {
 
     setIsImporting(true);
 
-    // Convert mapping object to the format expected by the server
-    const mappingObj: Record<string, string> = {
-      studentIdField: mapping.studentId || '',
-      firstNameField: mapping.firstName || '',
-      lastNameField: mapping.lastName || '',
-      orderNumberField: mapping.orderNumber || '',
-      orderTypeField: mapping.orderType || '',
-      balanceDueField: mapping.balanceDue || '',
-      paymentStatusField: mapping.paymentStatus || '',
-      yearbookField: mapping.yearbook || '',
-      personalizationField: mapping.personalization || '',
-      signaturePackageField: mapping.signaturePackage || '',
-      clearCoverField: mapping.clearCover || '',
-      photoPacketsField: mapping.photoPockets || '',
-      orderEnteredDateField: mapping.orderEnteredDate || '',
-    };
-
-    // Send the data in the format expected by the server
-    importStudentsMutation.mutate({
-      mappings: mappingObj,
-      csvData: parsedData,
-      operatorName,
+    // Convert the parsed CSV data into InsertStudent objects
+    const studentsToImport: InsertStudent[] = parsedData.map((row) => {
+      // Create a student object from the mapped CSV data
+      return {
+        studentId: row[mapping.studentId] || `IMPORT${Math.floor(Math.random() * 1000000)}`,
+        firstName: row[mapping.firstName] || "Unknown",
+        lastName: row[mapping.lastName] || "Unknown",
+        orderNumber: row[mapping.orderNumber] || `ORD${Math.floor(Math.random() * 1000000)}`,
+        orderType: row[mapping.orderType] || "Standard",
+        balanceDue: row[mapping.balanceDue] || "0",
+        paymentStatus: row[mapping.paymentStatus] || "UNPAID",
+        yearbook: convertToBoolean(row[mapping.yearbook]),
+        personalization: convertToBoolean(row[mapping.personalization]),
+        signaturePackage: convertToBoolean(row[mapping.signaturePackage]),
+        clearCover: convertToBoolean(row[mapping.clearCover]),
+        photoPockets: convertToBoolean(row[mapping.photoPockets]),
+      };
     });
+
+    // Send the prepared student data to the server
+    importStudentsMutation.mutate(studentsToImport);
   };
 
   // Helper function to convert various values to boolean
