@@ -157,7 +157,7 @@ export function PaymentFormImproved({
           onClick={() => handleRemoveBill(type)}
           disabled={value === 0 || isPending}
         >
-          <FontAwesomeIcon icon="minus" className="text-sm" />
+          -
         </Button>
         <Input
           type="number"
@@ -175,7 +175,7 @@ export function PaymentFormImproved({
           onClick={() => handleAddBill(type)}
           disabled={isPending}
         >
-          <FontAwesomeIcon icon="plus" className="text-sm" />
+          +
         </Button>
       </div>
     </div>

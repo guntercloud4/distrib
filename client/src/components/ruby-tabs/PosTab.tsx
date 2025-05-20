@@ -582,7 +582,7 @@ export function PosTab({ operatorName }: PosTabProps) {
                           onClick={() => handleRemoveBill('one')}
                           disabled={billsGiven.one === 0}
                         >
-                          <FontAwesomeIcon icon="minus" />
+                          -
                         </Button>
                         <Button 
                           variant="outline" 
@@ -609,7 +609,7 @@ export function PosTab({ operatorName }: PosTabProps) {
                           onClick={() => handleRemoveBill('five')}
                           disabled={billsGiven.five === 0}
                         >
-                          <FontAwesomeIcon icon="minus" />
+                          -
                         </Button>
                         <Button 
                           variant="outline" 
@@ -636,7 +636,7 @@ export function PosTab({ operatorName }: PosTabProps) {
                           onClick={() => handleRemoveBill('ten')}
                           disabled={billsGiven.ten === 0}
                         >
-                          <FontAwesomeIcon icon="minus" />
+                          -
                         </Button>
                         <Button 
                           variant="outline" 
@@ -663,7 +663,7 @@ export function PosTab({ operatorName }: PosTabProps) {
                           onClick={() => handleRemoveBill('twenty')}
                           disabled={billsGiven.twenty === 0}
                         >
-                          <FontAwesomeIcon icon="minus" />
+                          -
                         </Button>
                         <Button 
                           variant="outline" 
@@ -690,7 +690,7 @@ export function PosTab({ operatorName }: PosTabProps) {
                           onClick={() => handleRemoveBill('fifty')}
                           disabled={billsGiven.fifty === 0}
                         >
-                          <FontAwesomeIcon icon="minus" />
+                          -
                         </Button>
                         <Button 
                           variant="outline" 
@@ -717,7 +717,7 @@ export function PosTab({ operatorName }: PosTabProps) {
                           onClick={() => handleRemoveBill('hundred')}
                           disabled={billsGiven.hundred === 0}
                         >
-                          <FontAwesomeIcon icon="minus" />
+                          -
                         </Button>
                         <Button 
                           variant="outline" 
