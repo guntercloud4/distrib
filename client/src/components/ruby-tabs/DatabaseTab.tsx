@@ -589,7 +589,7 @@ export function DatabaseTab({ operatorName }: DatabaseTabProps) {
               Security Confirmation
             </label>
             <p className="text-sm text-neutral-600 mb-2">
-              To confirm this action, type <span className="font-bold">SuperSecure@1</span> in the field below:
+              To confirm this action, type the security phrase in the field below:
             </p>
             <Input
               id="security-phrase"
