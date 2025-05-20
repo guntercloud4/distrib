@@ -564,51 +564,170 @@ export function PosTab({ operatorName }: PosTabProps) {
             <div className="lg:col-span-2">
               {formStep === 3 ? (
                 <div className="bg-neutral-50 p-6 rounded-lg">
-                  <h4 className="text-lg font-medium text-neutral-800 mb-4">Add Cash</h4>
+                  <h4 className="text-lg font-medium text-neutral-800 mb-4">Manage Cash</h4>
                   
                   <div className="grid grid-cols-3 gap-3">
-                    <Button 
-                      variant="outline" 
-                      className="h-16 text-lg"
-                      onClick={() => handleBillButton('one')}
-                    >
-                      $1
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      className="h-16 text-lg"
-                      onClick={() => handleBillButton('five')}
-                    >
-                      $5
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      className="h-16 text-lg"
-                      onClick={() => handleBillButton('ten')}
-                    >
-                      $10
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      className="h-16 text-lg"
-                      onClick={() => handleBillButton('twenty')}
-                    >
-                      $20
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      className="h-16 text-lg"
-                      onClick={() => handleBillButton('fifty')}
-                    >
-                      $50
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      className="h-16 text-lg"
-                      onClick={() => handleBillButton('hundred')}
-                    >
-                      $100
-                    </Button>
+                    {/* $1 Bill */}
+                    <div className="flex flex-col">
+                      <div className="bg-white border border-neutral-200 rounded-md p-2 mb-1 flex justify-between items-center">
+                        <span className="text-lg font-medium">$1</span>
+                        <span className="text-sm font-semibold bg-neutral-100 px-2 py-1 rounded">
+                          × {billsGiven.one}
+                        </span>
+                      </div>
+                      <div className="flex">
+                        <Button 
+                          variant="outline" 
+                          className="flex-1 rounded-r-none border-r-0"
+                          onClick={() => handleRemoveBill('one')}
+                          disabled={billsGiven.one === 0}
+                        >
+                          <FontAwesomeIcon icon="minus" />
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          className="flex-1 rounded-l-none"
+                          onClick={() => handleBillButton('one')}
+                        >
+                          <FontAwesomeIcon icon="plus" />
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    {/* $5 Bill */}
+                    <div className="flex flex-col">
+                      <div className="bg-white border border-neutral-200 rounded-md p-2 mb-1 flex justify-between items-center">
+                        <span className="text-lg font-medium">$5</span>
+                        <span className="text-sm font-semibold bg-neutral-100 px-2 py-1 rounded">
+                          × {billsGiven.five}
+                        </span>
+                      </div>
+                      <div className="flex">
+                        <Button 
+                          variant="outline" 
+                          className="flex-1 rounded-r-none border-r-0"
+                          onClick={() => handleRemoveBill('five')}
+                          disabled={billsGiven.five === 0}
+                        >
+                          <FontAwesomeIcon icon="minus" />
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          className="flex-1 rounded-l-none"
+                          onClick={() => handleBillButton('five')}
+                        >
+                          <FontAwesomeIcon icon="plus" />
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    {/* $10 Bill */}
+                    <div className="flex flex-col">
+                      <div className="bg-white border border-neutral-200 rounded-md p-2 mb-1 flex justify-between items-center">
+                        <span className="text-lg font-medium">$10</span>
+                        <span className="text-sm font-semibold bg-neutral-100 px-2 py-1 rounded">
+                          × {billsGiven.ten}
+                        </span>
+                      </div>
+                      <div className="flex">
+                        <Button 
+                          variant="outline" 
+                          className="flex-1 rounded-r-none border-r-0"
+                          onClick={() => handleRemoveBill('ten')}
+                          disabled={billsGiven.ten === 0}
+                        >
+                          <FontAwesomeIcon icon="minus" />
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          className="flex-1 rounded-l-none"
+                          onClick={() => handleBillButton('ten')}
+                        >
+                          <FontAwesomeIcon icon="plus" />
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    {/* $20 Bill */}
+                    <div className="flex flex-col">
+                      <div className="bg-white border border-neutral-200 rounded-md p-2 mb-1 flex justify-between items-center">
+                        <span className="text-lg font-medium">$20</span>
+                        <span className="text-sm font-semibold bg-neutral-100 px-2 py-1 rounded">
+                          × {billsGiven.twenty}
+                        </span>
+                      </div>
+                      <div className="flex">
+                        <Button 
+                          variant="outline" 
+                          className="flex-1 rounded-r-none border-r-0"
+                          onClick={() => handleRemoveBill('twenty')}
+                          disabled={billsGiven.twenty === 0}
+                        >
+                          <FontAwesomeIcon icon="minus" />
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          className="flex-1 rounded-l-none"
+                          onClick={() => handleBillButton('twenty')}
+                        >
+                          <FontAwesomeIcon icon="plus" />
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    {/* $50 Bill */}
+                    <div className="flex flex-col">
+                      <div className="bg-white border border-neutral-200 rounded-md p-2 mb-1 flex justify-between items-center">
+                        <span className="text-lg font-medium">$50</span>
+                        <span className="text-sm font-semibold bg-neutral-100 px-2 py-1 rounded">
+                          × {billsGiven.fifty}
+                        </span>
+                      </div>
+                      <div className="flex">
+                        <Button 
+                          variant="outline" 
+                          className="flex-1 rounded-r-none border-r-0"
+                          onClick={() => handleRemoveBill('fifty')}
+                          disabled={billsGiven.fifty === 0}
+                        >
+                          <FontAwesomeIcon icon="minus" />
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          className="flex-1 rounded-l-none"
+                          onClick={() => handleBillButton('fifty')}
+                        >
+                          <FontAwesomeIcon icon="plus" />
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    {/* $100 Bill */}
+                    <div className="flex flex-col">
+                      <div className="bg-white border border-neutral-200 rounded-md p-2 mb-1 flex justify-between items-center">
+                        <span className="text-lg font-medium">$100</span>
+                        <span className="text-sm font-semibold bg-neutral-100 px-2 py-1 rounded">
+                          × {billsGiven.hundred}
+                        </span>
+                      </div>
+                      <div className="flex">
+                        <Button 
+                          variant="outline" 
+                          className="flex-1 rounded-r-none border-r-0"
+                          onClick={() => handleRemoveBill('hundred')}
+                          disabled={billsGiven.hundred === 0}
+                        >
+                          <FontAwesomeIcon icon="minus" />
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          className="flex-1 rounded-l-none"
+                          onClick={() => handleBillButton('hundred')}
+                        >
+                          <FontAwesomeIcon icon="plus" />
+                        </Button>
+                      </div>
+                    </div>
                   </div>
                   
                   <div className="mt-4">
