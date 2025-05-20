@@ -2,6 +2,9 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StationType } from "@/hooks/use-station-login";
+import { useToast } from "@/hooks/use-toast";
+import { useQuery } from "@tanstack/react-query";
+import { Operator } from "@shared/schema";
 
 interface StationLoginProps {
   stationType: StationType;
@@ -11,10 +14,88 @@ interface StationLoginProps {
 
 export function StationLogin({ stationType, onLogin, onBack }: StationLoginProps) {
   const [name, setName] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
   
-  const handleSubmit = (e: React.FormEvent) => {
+  // Fetch operators list for permission checking
+  const { data: operators } = useQuery<Operator[]>({
+    queryKey: ['/api/operators'],
+    staleTime: 10000 // 10 seconds
+  });
+  
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onLogin(name);
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      // Check if operator exists and has proper permissions
+      const operator = operators?.find(op => op.name.toLowerCase() === name.toLowerCase());
+      
+      if (!operator) {
+        setError("Operator not found. Please enter a valid operator name.");
+        toast({
+          title: "Authentication Error",
+          description: "Operator not found. Please enter a valid operator name.",
+          variant: "destructive"
+        });
+        setIsLoading(false);
+        return;
+      }
+      
+      // Skip permission check for Ruby Station (admin access)
+      if (stationType !== "ruby") {
+        // Check if operator has permission for this station
+        const permissions = operator.permissions || {};
+        let hasPermission = false;
+        
+        // Check station-specific permission
+        if (stationType === 'distribution' && permissions.distribution === true) {
+          hasPermission = true;
+        } else if (stationType === 'checker' && permissions.checker === true) {
+          hasPermission = true;
+        } else if (stationType === 'cash' && permissions.cash === true) {
+          hasPermission = true;
+        }
+        
+        if (!hasPermission) {
+          setError(`You don't have permission to access the ${stationType} station.`);
+          toast({
+            title: "Access Denied",
+            description: `You don't have permission to access the ${stationType} station.`,
+            variant: "destructive"
+          });
+          setIsLoading(false);
+          return;
+        }
+      }
+      
+      // If active status is false, deny access
+      if (operator.active === false) {
+        setError("Your account is inactive. Please contact an administrator.");
+        toast({
+          title: "Account Inactive",
+          description: "Your account is inactive. Please contact an administrator.",
+          variant: "destructive"
+        });
+        setIsLoading(false);
+        return;
+      }
+      
+      // All checks passed, allow login
+      onLogin(name);
+    } catch (err) {
+      console.error("Login error:", err);
+      setError("An error occurred during login. Please try again.");
+      toast({
+        title: "Login Error",
+        description: "An error occurred during login. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const stationName = stationType 
@@ -46,11 +127,23 @@ export function StationLogin({ stationType, onLogin, onBack }: StationLoginProps
             />
           </div>
           
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 text-red-700 border border-red-200 rounded">
+              {error}
+            </div>
+          )}
+          
           <Button 
             type="submit" 
             className="w-full"
+            disabled={isLoading}
           >
-            Log In
+            {isLoading ? (
+              <>
+                <span className="mr-2">Loading...</span>
+                <span className="animate-spin">⏳</span>
+              </>
+            ) : "Log In"}
           </Button>
         </form>
       </div>
