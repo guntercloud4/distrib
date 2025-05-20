@@ -661,7 +661,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Wipe checkers data (verified distributions) 
+  // Wipe checkers data (all distributions) 
   app.delete("/api/database/wipe-checkers", async (req: Request, res: Response) => {
     try {
       const { operatorName } = req.body;
@@ -669,22 +669,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Operator name is required" });
       }
       
-      // Get all verified distributions before reset
+      // Get all distributions before deletion
       const allDistributions = await storage.getDistributions();
-      const verifiedDistributions = allDistributions.filter(dist => dist.verified);
       
-      // We don't have a direct method to reset verified status, so we'll use a direct DB query
+      // Delete all distributions
       const { pool } = await import("./db");
-      const result = await pool.query(
-        "UPDATE distributions SET verified = false, verified_by = null, verified_at = null WHERE verified = true"
-      );
+      const result = await pool.query("DELETE FROM distributions");
       
       // Log the action
       await storage.createLog({
         studentId: "SYSTEM",
         action: "WIPE_CHECKERS",
         details: { 
-          count: verifiedDistributions.length,
+          count: allDistributions.length,
           success: result.rowCount,
           operator: operatorName
         },
@@ -694,7 +691,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json({ 
         success: true,
-        totalDistributions: verifiedDistributions.length,
+        totalDistributions: allDistributions.length,
         wiped: result.rowCount,
         errors: 0
       });

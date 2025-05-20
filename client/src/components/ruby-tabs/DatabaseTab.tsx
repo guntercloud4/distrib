@@ -518,8 +518,8 @@ export function DatabaseTab({ operatorName }: DatabaseTabProps) {
                           setShowWipeDialog(true);
                         }}
                       >
-                        <FontAwesomeIcon icon="check-circle" className="mr-2" />
-                        Wipe Checkers
+                        <FontAwesomeIcon icon="trash" className="mr-2" />
+                        Delete Distributions
                       </Button>
                       
                       <Button 
@@ -553,7 +553,7 @@ export function DatabaseTab({ operatorName }: DatabaseTabProps) {
           <DialogHeader>
             <DialogTitle>
               {wipeType === "database" && "Wipe Entire Database?"}
-              {wipeType === "checkers" && "Reset Verified Distributions?"}
+              {wipeType === "checkers" && "Delete All Distributions?"}
               {wipeType === "logs" && "Clear System Logs?"}
             </DialogTitle>
             <DialogDescription>
@@ -561,7 +561,7 @@ export function DatabaseTab({ operatorName }: DatabaseTabProps) {
                 "This action cannot be undone. This will permanently delete all student records from the database."
               }
               {wipeType === "checkers" && 
-                "This action will reset all verified distributions to unverified status. This cannot be undone."
+                "This action will permanently delete ALL distributions (both pending and confirmed). This cannot be undone."
               }
               {wipeType === "logs" && 
                 "This action will permanently delete all system logs except administration logs. This cannot be undone."
@@ -574,7 +574,7 @@ export function DatabaseTab({ operatorName }: DatabaseTabProps) {
                     "All student data, distributions, and payment records will be permanently deleted. It is strongly recommended to export a backup first."
                   }
                   {wipeType === "checkers" && 
-                    "All verified distributions will be reset to unverified status. The system will no longer show these distributions as confirmed."
+                    "All distributions (both pending and confirmed) will be permanently deleted from the system. All distribution records will be gone."
                   }
                   {wipeType === "logs" && 
                     "All system logs except administration logs will be permanently deleted. This will affect the audit history of the system."
