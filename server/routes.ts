@@ -10,6 +10,7 @@ import {
   insertActionLogSchema,
   insertDistributionSchema,
   insertPaymentSchema,
+  insertOperatorSchema,
   paymentProcessSchema,
   csvMappingSchema,
   Distribution,

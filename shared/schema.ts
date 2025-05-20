@@ -56,12 +56,19 @@ export const payments = pgTable("payments", {
 });
 
 // Operators table
+// Define a default permissions object
+const defaultPermissions = {
+  distribution: false,
+  checker: false,
+  cash: false
+};
+
 export const operators = pgTable("operators", {
   id: serial("id").primaryKey(),
   name: text("name").notNull().unique(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   active: boolean("active").notNull().default(true),
-  permissions: jsonb("permissions").notNull().default({}),
+  permissions: jsonb("permissions").notNull().default(defaultPermissions),
 });
 
 // Insert schema types
@@ -99,6 +106,8 @@ export const operatorPermissionsSchema = z.object({
   checker: z.boolean().default(false),
   cash: z.boolean().default(false)
 });
+
+export type OperatorPermissions = z.infer<typeof operatorPermissionsSchema>;
 
 export const insertOperatorSchema = createInsertSchema(operators).omit({
   id: true,

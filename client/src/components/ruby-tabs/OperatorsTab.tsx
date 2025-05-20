@@ -26,15 +26,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Operator, InsertOperator } from "@shared/schema";
-
-// Define the permissions interface for type safety
-interface OperatorPermissions {
-  distribution: boolean;
-  checker: boolean;
-  cash: boolean;
-  [key: string]: boolean;
-}
+import { Operator, InsertOperator, OperatorPermissions } from "@shared/schema";
 
 interface OperatorsTabProps {
   operatorName: string;
@@ -44,16 +36,18 @@ export function OperatorsTab({ operatorName }: OperatorsTabProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
-  // Cast the permissions object to use our type-safe interface
+  // Initialize with type-safe permissions object
+  const defaultPermissions: OperatorPermissions = {
+    distribution: false,
+    checker: false,
+    cash: false
+  };
+
   const [selectedOperator, setSelectedOperator] = useState<Operator | null>(null);
-  const [newOperator, setNewOperator] = useState<Partial<InsertOperator>>({
+  const [newOperator, setNewOperator] = useState<InsertOperator>({
     name: "",
     active: true,
-    permissions: {
-      distribution: false,
-      checker: false,
-      cash: false
-    } as OperatorPermissions
+    permissions: defaultPermissions
   });
 
   const { toast } = useToast();
@@ -66,7 +60,16 @@ export function OperatorsTab({ operatorName }: OperatorsTabProps) {
     isError: operatorsError
   } = useQuery<Operator[]>({
     queryKey: ['/api/operators'],
-    staleTime: 10000 // 10 seconds
+    staleTime: 10000, // 10 seconds
+    // Transform the data to ensure permissions object has correct structure
+    select: (data) => data.map(operator => ({
+      ...operator,
+      permissions: {
+        distribution: operator.permissions?.distribution || false,
+        checker: operator.permissions?.checker || false,
+        cash: operator.permissions?.cash || false
+      }
+    }))
   });
 
   // Filter operators
@@ -279,24 +282,24 @@ export function OperatorsTab({ operatorName }: OperatorsTabProps) {
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-2 flex-wrap">
-                          {operator.permissions.distribution && (
+                          {operator.permissions?.distribution && (
                             <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-200">
                               Distribution
                             </Badge>
                           )}
-                          {operator.permissions.checker && (
+                          {operator.permissions?.checker && (
                             <Badge variant="secondary" className="bg-purple-50 text-purple-700 border-purple-200">
                               Checker
                             </Badge>
                           )}
-                          {operator.permissions.cash && (
+                          {operator.permissions?.cash && (
                             <Badge variant="secondary" className="bg-amber-50 text-amber-700 border-amber-200">
                               Cash
                             </Badge>
                           )}
-                          {!operator.permissions.distribution && 
-                           !operator.permissions.checker && 
-                           !operator.permissions.cash && (
+                          {!operator.permissions?.distribution && 
+                           !operator.permissions?.checker && 
+                           !operator.permissions?.cash && (
                             <span className="text-neutral-400 text-sm">
                               None
                             </span>
