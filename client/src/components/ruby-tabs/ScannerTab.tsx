@@ -4,12 +4,12 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { 
+import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { socketProvider } from "@/lib/socket";
@@ -38,9 +38,9 @@ export function ScannerTab({ operatorName }: ScannerTabProps) {
         inputRef.current.focus();
       }
     };
-    
+
     focusInput(); // Initial focus
-    
+
     // Re-focus when modal closes or after distribution
     if (!showModal) {
       focusInput();
@@ -52,14 +52,14 @@ export function ScannerTab({ operatorName }: ScannerTabProps) {
   }, [showModal, distributionSuccess]);
 
   // Fetch student by ID
-  const { 
+  const {
     data: student,
     isLoading: studentLoading,
     isError: studentError,
     error: studentErrorData,
-    refetch
+    refetch,
   } = useQuery<Student>({
-    queryKey: ['/api/students', studentId],
+    queryKey: ["/api/students", studentId],
     queryFn: async () => {
       if (!studentId.trim()) {
         throw new Error("Student ID is required");
@@ -77,15 +77,15 @@ export function ScannerTab({ operatorName }: ScannerTabProps) {
     },
     enabled: false, // Don't fetch automatically
     staleTime: 10000,
-    retry: false
+    retry: false,
   });
 
-    const { 
+  const {
     data: distribution,
     isError: distributionError,
-    refetch: refetchDistributions
+    refetch: refetchDistributions,
   } = useQuery({
-    queryKey: ['/api/distributions/student', studentId],
+    queryKey: ["/api/distributions/student", studentId],
     queryFn: async () => {
       if (!studentId.trim()) {
         return [];
@@ -93,13 +93,21 @@ export function ScannerTab({ operatorName }: ScannerTabProps) {
       try {
         // Use correct API endpoint for student-specific distributions
         const response = await fetch(`/api/distributions/student/${studentId}`);
-        console.log("Distribution API response:", response.status, response.statusText);
-        
+        console.log(
+          "Distribution API response:",
+          response.status,
+          response.statusText,
+        );
+
         if (!response.ok) {
-          console.error("Failed to fetch distributions:", response.status, response.statusText);
+          console.error(
+            "Failed to fetch distributions:",
+            response.status,
+            response.statusText,
+          );
           return [];
         }
-        
+
         const data = await response.json();
         console.log("Student distributions data:", data);
         return data;
@@ -115,7 +123,7 @@ export function ScannerTab({ operatorName }: ScannerTabProps) {
   // Distribute mutation
   const distributeMutation = useMutation({
     mutationFn: async (studentId: string) => {
-      const res = await apiRequest('POST', '/api/distributions', {
+      const res = await apiRequest("POST", "/api/distributions", {
         studentId: studentId.toString(),
         operatorName: operatorName,
         timestamp: new Date(),
@@ -134,24 +142,24 @@ export function ScannerTab({ operatorName }: ScannerTabProps) {
 
       // Log the action via WebSocket
       socketProvider.send({
-        type: 'NEW_DISTRIBUTION',
+        type: "NEW_DISTRIBUTION",
         data: {
           ...data,
-          studentId: student?.studentId
-        }
+          studentId: student?.studentId,
+        },
       });
 
       // Invalidate queries
-      queryClient.invalidateQueries({ queryKey: ['/api/distributions'] });
+      queryClient.invalidateQueries({ queryKey: ["/api/distributions"] });
     },
     onError: (error: Error) => {
       toast({
         title: "Distribution failed",
         description: error.message,
-        variant: "destructive"
+        variant: "destructive",
       });
       setShowModal(false);
-    }
+    },
   });
 
   // Handle form submit
@@ -162,7 +170,7 @@ export function ScannerTab({ operatorName }: ScannerTabProps) {
       toast({
         title: "Empty ID",
         description: "Please enter a student ID",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
@@ -172,23 +180,23 @@ export function ScannerTab({ operatorName }: ScannerTabProps) {
     try {
       // Fetch student data
       const studentResult = await refetch();
-      
+
       if (studentResult.isError || !studentResult.data) {
         setIsLoading(false);
         toast({
           title: "Student not found",
           description: `No student found with ID "${studentId}"`,
-          variant: "destructive"
+          variant: "destructive",
         });
         return;
       }
-      
+
       console.log("Student found:", studentResult.data);
-      
+
       // Now fetch distribution data
       const distributionResult = await refetchDistributions();
       console.log("Distribution fetch result:", distributionResult);
-      
+
       // Continue regardless of distribution result (empty array is valid)
       setIsLoading(false);
       setShowModal(true);
@@ -198,7 +206,7 @@ export function ScannerTab({ operatorName }: ScannerTabProps) {
       toast({
         title: "Lookup Error",
         description: "An error occurred during the student lookup",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
@@ -221,14 +229,21 @@ export function ScannerTab({ operatorName }: ScannerTabProps) {
       <Card>
         <CardContent className="p-6">
           <div className="mb-6">
-            <h3 className="text-lg font-medium text-neutral-800 mb-1">Scanner Station</h3>
-            <p className="text-neutral-600 text-sm">Scan student IDs to record book distributions</p>
+            <h3 className="text-lg font-medium text-neutral-800 mb-1">
+              Scanner Station
+            </h3>
+            <p className="text-neutral-600 text-sm">
+              Scan student IDs to record book distributions
+            </p>
           </div>
 
           <form onSubmit={handleSubmit} className="max-w-md mx-auto">
             <div className="space-y-4">
               <div>
-                <label htmlFor="scanner-input" className="block text-sm font-medium text-neutral-700 mb-1">
+                <label
+                  htmlFor="scanner-input"
+                  className="block text-sm font-medium text-neutral-700 mb-1"
+                >
                   Enter or scan student ID
                 </label>
                 <div className="relative">
@@ -249,14 +264,17 @@ export function ScannerTab({ operatorName }: ScannerTabProps) {
                 </div>
               </div>
 
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 className="w-full"
                 disabled={!studentId.trim() || isLoading}
               >
                 {isLoading ? (
                   <>
-                    <FontAwesomeIcon icon="spinner" className="animate-spin mr-2" />
+                    <FontAwesomeIcon
+                      icon="spinner"
+                      className="animate-spin mr-2"
+                    />
                     Searching...
                   </>
                 ) : (
@@ -276,7 +294,9 @@ export function ScannerTab({ operatorName }: ScannerTabProps) {
         <DialogContent className="sm:max-w-[650px]">
           <DialogHeader>
             <DialogTitle>
-              {distributionSuccess ? "Yearbook Distributed" : "Student Information"}
+              {distributionSuccess
+                ? "Yearbook Distributed"
+                : "Student Information"}
             </DialogTitle>
           </DialogHeader>
 
@@ -284,13 +304,17 @@ export function ScannerTab({ operatorName }: ScannerTabProps) {
             <div className="py-6">
               <div className="flex items-center justify-center">
                 <div className="h-16 w-16 rounded-full bg-green-100 flex items-center justify-center">
-                  <FontAwesomeIcon icon="check" className="text-2xl text-green-600" />
+                  <FontAwesomeIcon
+                    icon="check"
+                    className="text-2xl text-green-600"
+                  />
                 </div>
               </div>
 
               <div className="text-center mt-4">
                 <h3 className="text-lg font-medium">
-                  Success! The yearbook has been distributed to {student?.firstName} {student?.lastName}
+                  Success! The yearbook has been distributed to{" "}
+                  {student?.firstName} {student?.lastName}
                 </h3>
                 <p className="text-neutral-600 mt-2">
                   The distribution has been recorded and sent to Verification.
@@ -308,15 +332,23 @@ export function ScannerTab({ operatorName }: ScannerTabProps) {
                     {/* Show current distribution status as explicit indicator */}
                     <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
                       <div className="flex items-center">
-                        <FontAwesomeIcon icon="info-circle" className="text-gray-500 mr-3" />
+                        <FontAwesomeIcon
+                          icon="info-circle"
+                          className="text-gray-500 mr-3"
+                        />
                         <div>
-                          <h4 className="font-medium text-gray-800">Current Status</h4>
+                          <h4 className="font-medium text-gray-800">
+                            Current Status
+                          </h4>
                           <p className="text-sm text-gray-700 flex items-center mt-1">
                             {(() => {
                               // Clear distributions check
-                              const isDistributionArray = Array.isArray(distribution);
-                              const hasNoDistributions = !isDistributionArray || distribution.length === 0;
-                              
+                              const isDistributionArray =
+                                Array.isArray(distribution);
+                              const hasNoDistributions =
+                                !isDistributionArray ||
+                                distribution.length === 0;
+
                               // Determine status
                               if (hasNoDistributions) {
                                 return (
@@ -325,7 +357,7 @@ export function ScannerTab({ operatorName }: ScannerTabProps) {
                                     <span>Pending Distribution</span>
                                   </>
                                 );
-                              } else if (distribution.some(d => d.verified)) {
+                              } else if (distribution.some((d) => d.verified)) {
                                 return (
                                   <>
                                     <span className="h-2 w-2 rounded-full bg-green-500 mr-2"></span>
@@ -345,29 +377,39 @@ export function ScannerTab({ operatorName }: ScannerTabProps) {
                         </div>
                       </div>
                     </div>
-                    
+
                     {/* Action buttons or messages based on explicit status strings */}
                     {(() => {
                       const isDistributionArray = Array.isArray(distribution);
-                      const hasNoDistributions = !isDistributionArray || distribution.length === 0;
-                      
-                      console.log("Distribution data type:", typeof distribution);
+                      const hasNoDistributions =
+                        !isDistributionArray || distribution.length === 0;
+
+                      console.log(
+                        "Distribution data type:",
+                        typeof distribution,
+                      );
                       console.log("Is array:", isDistributionArray);
-                      console.log("Length:", isDistributionArray ? distribution.length : 'N/A');
+                      console.log(
+                        "Length:",
+                        isDistributionArray ? distribution.length : "N/A",
+                      );
                       console.log("Has no distributions:", hasNoDistributions);
-                      
+
                       // Explicit "Pending Distribution" status - show distribute button
                       if (hasNoDistributions) {
                         console.log("STATUS: Pending Distribution");
                         return (
-                          <Button 
-                            onClick={handleDistribute} 
+                          <Button
+                            onClick={handleDistribute}
                             disabled={distributeMutation.isPending}
                             className="w-full"
                           >
                             {distributeMutation.isPending ? (
                               <>
-                                <FontAwesomeIcon icon="spinner" className="animate-spin mr-2" />
+                                <FontAwesomeIcon
+                                  icon="spinner"
+                                  className="animate-spin mr-2"
+                                />
                                 Processing...
                               </>
                             ) : (
@@ -379,35 +421,49 @@ export function ScannerTab({ operatorName }: ScannerTabProps) {
                           </Button>
                         );
                       }
-                      
+
                       // Check for "Confirmed" - any verified distributions
-                      if (distribution.some(d => d.verified)) {
+                      if (distribution.some((d) => d.verified)) {
                         console.log("STATUS: Confirmed");
                         return (
                           <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
                             <div className="flex items-center">
-                              <FontAwesomeIcon icon="exclamation-triangle" className="text-yellow-500 mr-3" />
+                              <FontAwesomeIcon
+                                icon="exclamation-triangle"
+                                className="text-yellow-500 mr-3"
+                              />
                               <div>
-                                <h4 className="font-medium text-yellow-800">Already Confirmed</h4>
+                                <h4 className="font-medium text-yellow-800">
+                                  Already Confirmed
+                                </h4>
                                 <p className="text-sm text-yellow-700">
-                                  This student has already received and confirmed their yearbook. Please direct them to the Ruby Station desk for assistance.
+                                  This student has already received and
+                                  confirmed their yearbook. Please direct them
+                                  to the Ruby Station desk for assistance.
                                 </p>
                               </div>
                             </div>
                           </div>
                         );
                       }
-                      
+
                       // Otherwise "Distributed" - unverified distributions exist
                       console.log("STATUS: Distributed");
                       return (
                         <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
                           <div className="flex items-center">
-                            <FontAwesomeIcon icon="exclamation-triangle" className="text-yellow-500 mr-3" />
+                            <FontAwesomeIcon
+                              icon="exclamation-triangle"
+                              className="text-yellow-500 mr-3"
+                            />
                             <div>
-                              <h4 className="font-medium text-yellow-800">Distribution Pending</h4>
+                              <h4 className="font-medium text-yellow-800">
+                                Distribution Pending
+                              </h4>
                               <p className="text-sm text-yellow-700">
-                                This student's yearbook distribution is pending verification. Please direct them to the Checkers Station for verification.
+                                This student's yearbook distribution is pending
+                                verification. Please direct them to the Ruby
+                                Station desk for assistance.
                               </p>
                             </div>
                           </div>

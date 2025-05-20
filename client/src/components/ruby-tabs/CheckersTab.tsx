@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Distribution, Student } from "@shared/schema";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -16,6 +17,7 @@ interface CheckersTabProps {
 
 export function CheckersTab({ operatorName }: CheckersTabProps) {
   const [activeTab, setActiveTab] = useState("pending");
+  const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -26,7 +28,7 @@ export function CheckersTab({ operatorName }: CheckersTabProps) {
     refetch: refetchDistributions
   } = useQuery<Distribution[]>({
     queryKey: ['/api/distributions'],
-    refetchInterval: 5000 // Refresh every 5 seconds to check for new distributions
+    refetchInterval: 2000 // Refresh every 2 seconds to check for new distributions
   });
   
   // Fetch students
@@ -35,9 +37,37 @@ export function CheckersTab({ operatorName }: CheckersTabProps) {
     staleTime: 30000 // 30 seconds
   });
   
+  // Filter distributions by search term and sort (oldest first)
+  const filterAndSortDistributions = (dists: Distribution[]) => {
+    return dists
+      .filter(dist => {
+        if (!searchTerm) return true;
+        
+        // Search by student ID
+        if (dist.studentId.toLowerCase().includes(searchTerm.toLowerCase())) return true;
+        
+        // Search by operator name
+        if (dist.operatorName.toLowerCase().includes(searchTerm.toLowerCase())) return true;
+        
+        // Search by student name if available
+        const student = students?.find(s => s.studentId === dist.studentId);
+        if (student && 
+            (`${student.firstName} ${student.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+             `${student.lastName}, ${student.firstName}`.toLowerCase().includes(searchTerm.toLowerCase()))) {
+          return true;
+        }
+        
+        return false;
+      })
+      .sort((a, b) => {
+        // Sort by timestamp, oldest first (ascending order)
+        return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
+      });
+  };
+
   // Split distributions into pending and confirmed
-  const pendingDistributions = distributions?.filter(dist => !dist.verified) || [];
-  const confirmedDistributions = distributions?.filter(dist => dist.verified) || [];
+  const pendingDistributions = filterAndSortDistributions(distributions?.filter(dist => !dist.verified) || []);
+  const confirmedDistributions = filterAndSortDistributions(distributions?.filter(dist => dist.verified) || []);
   
   // WebSocket handling
   useEffect(() => {
@@ -100,8 +130,34 @@ export function CheckersTab({ operatorName }: CheckersTabProps) {
     <div>
       <Card>
         <CardContent className="p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-medium text-neutral-800">Checkers Station</h3>
+          <div className="flex flex-col space-y-4 mb-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-medium text-neutral-800">Checkers Station</h3>
+            </div>
+            
+            <div className="relative">
+              <Input
+                type="text"
+                placeholder="Search by student name, ID, or operator..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+              <FontAwesomeIcon 
+                icon="search" 
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400"
+              />
+              {searchTerm && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0"
+                  onClick={() => setSearchTerm("")}
+                >
+                  <FontAwesomeIcon icon="times" />
+                </Button>
+              )}
+            </div>
           </div>
           
           <Tabs defaultValue="pending" value={activeTab} onValueChange={setActiveTab} className="w-full">

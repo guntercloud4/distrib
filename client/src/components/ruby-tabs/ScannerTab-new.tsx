@@ -83,25 +83,9 @@ export function ScannerTab({ operatorName }: ScannerTabProps) {
     onSuccess: (data) => {
       setShowSuccessDialog(true);
       
-      // Log the action via WebSocket
-      socketProvider.send({
-        type: 'LOG_ACTION',
-        data: {
-          id: Date.now(),
-          timestamp: new Date(),
-          studentId: scannedStudentId,
-          action: 'DISTRIBUTE',
-          details: { },
-          stationName: 'Ruby Station',
-          operatorName
-        }
-      });
-      
-      // Broadcast the new distribution via WebSocket
-      socketProvider.send({
-        type: 'NEW_DISTRIBUTION',
-        data: data
-      });
+      // Only the server should broadcast WebSocket events now
+      // We'll let the server handle the logging and broadcasting
+      // This fixes the multiple logging issue
     },
     onError: (error: Error) => {
       toast({
