@@ -55,6 +55,15 @@ export const payments = pgTable("payments", {
   changeBills: jsonb("change_bills").notNull(),
 });
 
+// Operators table
+export const operators = pgTable("operators", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull().unique(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  active: boolean("active").notNull().default(true),
+  permissions: jsonb("permissions").notNull().default({}),
+});
+
 // Insert schema types
 export const insertStudentSchema = createInsertSchema(students)
   .omit({
@@ -82,6 +91,11 @@ export const insertDistributionSchema = createInsertSchema(distributions).omit({
 export const insertPaymentSchema = createInsertSchema(payments).omit({
   id: true,
   timestamp: true,
+});
+
+export const insertOperatorSchema = createInsertSchema(operators).omit({
+  id: true,
+  createdAt: true,
 });
 
 // Custom schema for payment processing
@@ -125,6 +139,8 @@ export type Distribution = typeof distributions.$inferSelect;
 export type InsertDistribution = z.infer<typeof insertDistributionSchema>;
 export type Payment = typeof payments.$inferSelect;
 export type InsertPayment = z.infer<typeof insertPaymentSchema>;
+export type Operator = typeof operators.$inferSelect;
+export type InsertOperator = z.infer<typeof insertOperatorSchema>;
 export type PaymentProcess = z.infer<typeof paymentProcessSchema>;
 export type CsvMapping = z.infer<typeof csvMappingSchema>;
 

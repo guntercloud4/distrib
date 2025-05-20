@@ -43,6 +43,14 @@ export interface IStorage {
   getPaymentsByStudentId(studentId: string): Promise<Payment[]>;
   createPayment(payment: InsertPayment): Promise<Payment>;
 
+  // Operator operations
+  getOperators(): Promise<Operator[]>;
+  getOperatorById(id: number): Promise<Operator | undefined>;
+  getOperatorByName(name: string): Promise<Operator | undefined>;
+  createOperator(operator: InsertOperator): Promise<Operator>;
+  updateOperator(id: number, operator: Partial<InsertOperator>): Promise<Operator | undefined>;
+  deleteOperator(id: number): Promise<boolean>;
+
   // Processing functions
   processPayment(paymentData: PaymentProcess): Promise<Payment>;
 
