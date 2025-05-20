@@ -33,10 +33,23 @@ export function ScannerTab({ operatorName }: ScannerTabProps) {
 
   // Auto-focus the input field
   useEffect(() => {
-    if (inputRef.current && !showModal) {
-      inputRef.current.focus();
+    const focusInput = () => {
+      if (inputRef.current) {
+        inputRef.current.focus();
+      }
+    };
+    
+    focusInput(); // Initial focus
+    
+    // Re-focus when modal closes or after distribution
+    if (!showModal) {
+      focusInput();
     }
-  }, [showModal]);
+
+    // Re-focus on component mount and after any state changes
+    const timeoutId = setTimeout(focusInput, 100);
+    return () => clearTimeout(timeoutId);
+  }, [showModal, distributionSuccess]);
 
   // Fetch student by ID
   const { 
