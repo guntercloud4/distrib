@@ -140,14 +140,8 @@ export function ScannerTab({ operatorName }: ScannerTabProps) {
         description: `Yearbook distributed to ${student?.firstName} ${student?.lastName}`,
       });
 
-      // Log the action via WebSocket
-      socketProvider.send({
-        type: "NEW_DISTRIBUTION",
-        data: {
-          ...data,
-          studentId: student?.studentId,
-        },
-      });
+      // Server already broadcasts the WebSocket message
+      // No need to send from client side - removing to avoid duplicate logs
 
       // Invalidate queries
       queryClient.invalidateQueries({ queryKey: ["/api/distributions"] });
