@@ -11,6 +11,9 @@ import {
   payments,
   Payment,
   InsertPayment,
+  operators,
+  Operator,
+  InsertOperator,
   PaymentProcess
 } from "@shared/schema";
 import { db } from "./db";
@@ -359,6 +362,76 @@ export class DatabaseStorage implements IStorage {
     });
 
     return imported;
+  }
+
+  // Operator operations
+  async getOperators(): Promise<Operator[]> {
+    try {
+      return await db.select().from(operators).orderBy(asc(operators.name));
+    } catch (error) {
+      console.error("Error in getOperators:", error);
+      throw new Error("Failed to get operators");
+    }
+  }
+
+  async getOperatorById(id: number): Promise<Operator | undefined> {
+    try {
+      const results = await db.select().from(operators).where(eq(operators.id, id));
+      return results.length ? results[0] : undefined;
+    } catch (error) {
+      console.error("Error in getOperatorById:", error);
+      throw new Error("Failed to get operator by id");
+    }
+  }
+
+  async getOperatorByName(name: string): Promise<Operator | undefined> {
+    try {
+      const results = await db.select().from(operators).where(eq(operators.name, name));
+      return results.length ? results[0] : undefined;
+    } catch (error) {
+      console.error("Error in getOperatorByName:", error);
+      throw new Error("Failed to get operator by name");
+    }
+  }
+
+  async createOperator(operator: InsertOperator): Promise<Operator> {
+    try {
+      const results = await db.insert(operators).values(operator).returning();
+      if (!results.length) {
+        throw new Error("No operator returned after insertion");
+      }
+      return results[0];
+    } catch (error) {
+      console.error("Error in createOperator:", error);
+      throw new Error("Failed to create operator");
+    }
+  }
+
+  async updateOperator(id: number, operator: Partial<InsertOperator>): Promise<Operator | undefined> {
+    try {
+      const results = await db
+        .update(operators)
+        .set(operator)
+        .where(eq(operators.id, id))
+        .returning();
+      return results.length ? results[0] : undefined;
+    } catch (error) {
+      console.error("Error in updateOperator:", error);
+      throw new Error("Failed to update operator");
+    }
+  }
+
+  async deleteOperator(id: number): Promise<boolean> {
+    try {
+      const results = await db
+        .delete(operators)
+        .where(eq(operators.id, id))
+        .returning();
+      return results.length > 0;
+    } catch (error) {
+      console.error("Error in deleteOperator:", error);
+      throw new Error("Failed to delete operator");
+    }
   }
 }
 
