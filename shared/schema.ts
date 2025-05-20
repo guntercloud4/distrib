@@ -93,9 +93,18 @@ export const insertPaymentSchema = createInsertSchema(payments).omit({
   timestamp: true,
 });
 
+// Define operator permissions schema
+export const operatorPermissionsSchema = z.object({
+  distribution: z.boolean().default(false),
+  checker: z.boolean().default(false),
+  cash: z.boolean().default(false)
+});
+
 export const insertOperatorSchema = createInsertSchema(operators).omit({
   id: true,
   createdAt: true,
+}).extend({
+  permissions: operatorPermissionsSchema
 });
 
 // Custom schema for payment processing
