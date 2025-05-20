@@ -661,5 +661,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Wipe checkers data (verified distributions) 
+  app.delete("/api/database/wipe-checkers", async (req: Request, res: Response) => {
+    try {
+      const { operatorName } = req.body;
+      if (!operatorName) {
+        return res.status(400).json({ error: "Operator name is required" });
+      }
+      
+      // Get all verified distributions before reset
+      const allDistributions = await storage.getDistributions();
+      const verifiedDistributions = allDistributions.filter(dist => dist.verified);
+      
+      // We don't have a direct method to reset verified status, so we'll use a direct DB query
+      const { pool } = require("./db");
+      const result = await pool.query(
+        "UPDATE distributions SET verified = false, verified_by = null, verified_at = null WHERE verified = true"
+      );
+      
+      // Log the action
+      await storage.createLog({
+        studentId: "SYSTEM",
+        action: "WIPE_CHECKERS",
+        details: { 
+          count: verifiedDistributions.length,
+          success: result.rowCount,
+          operator: operatorName
+        },
+        stationName: "Ruby Station",
+        operatorName
+      });
+      
+      res.json({ 
+        success: true,
+        totalDistributions: verifiedDistributions.length,
+        wiped: result.rowCount,
+        errors: 0
+      });
+    } catch (error) {
+      console.error("Error wiping checkers data:", error);
+      res.status(500).json({ error: "Failed to wipe checkers data" });
+    }
+  });
+  
+  // Wipe system logs
+  app.delete("/api/database/wipe-logs", async (req: Request, res: Response) => {
+    try {
+      const { operatorName } = req.body;
+      if (!operatorName) {
+        return res.status(400).json({ error: "Operator name is required" });
+      }
+      
+      // Get all logs count before deletion
+      const allLogs = await storage.getLogs();
+      
+      // Use direct database query to delete logs except system logs
+      const { pool } = require("./db");
+      const result = await pool.query(
+        "DELETE FROM action_logs WHERE student_id <> 'SYSTEM'"
+      );
+      
+      // Log the action (this log will remain after wiping)
+      await storage.createLog({
+        studentId: "SYSTEM",
+        action: "WIPE_LOGS",
+        details: { 
+          count: allLogs.length,
+          success: result.rowCount,
+          operator: operatorName
+        },
+        stationName: "Ruby Station",
+        operatorName
+      });
+      
+      res.json({ 
+        success: true,
+        totalLogs: allLogs.length,
+        wiped: result.rowCount,
+        errors: 0
+      });
+    } catch (error) {
+      console.error("Error wiping system logs:", error);
+      res.status(500).json({ error: "Failed to wipe system logs" });
+    }
+  });
+
   return httpServer;
 }

@@ -60,7 +60,11 @@ export function DatabaseTab({ operatorName }: DatabaseTabProps) {
   const [mapping, setMapping] = useState<{ [key: string]: string }>({});
   const [isImporting, setIsImporting] = useState(false);
   const [showWipeDialog, setShowWipeDialog] = useState(false);
+  const [showWipeCheckersDialog, setShowWipeCheckersDialog] = useState(false);
+  const [showWipeLogsDialog, setShowWipeLogsDialog] = useState(false);
   const [isWiping, setIsWiping] = useState(false);
+  const [securityPhrase, setSecurityPhrase] = useState("");
+  const [wipeType, setWipeType] = useState<"database" | "checkers" | "logs">("database");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -170,8 +174,11 @@ export function DatabaseTab({ operatorName }: DatabaseTabProps) {
         variant: data.errors > 0 ? "destructive" : "default",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/students"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/distributions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/logs"] });
       setShowWipeDialog(false);
       setIsWiping(false);
+      setSecurityPhrase("");
     },
     onError: (error: Error) => {
       toast({
@@ -180,6 +187,62 @@ export function DatabaseTab({ operatorName }: DatabaseTabProps) {
         variant: "destructive",
       });
       setIsWiping(false);
+      setSecurityPhrase("");
+    },
+  });
+  
+  // Wipe checkers mutation
+  const wipeCheckersMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("DELETE", "/api/database/wipe-checkers", { operatorName });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Checkers data wiped successfully",
+        description: `Successfully reset ${data.wiped} verified distributions.`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/distributions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/logs"] });
+      setShowWipeCheckersDialog(false);
+      setIsWiping(false);
+      setSecurityPhrase("");
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to wipe checkers data",
+        description: error.message,
+        variant: "destructive",
+      });
+      setIsWiping(false);
+      setSecurityPhrase("");
+    },
+  });
+  
+  // Wipe logs mutation
+  const wipeLogsMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("DELETE", "/api/database/wipe-logs", { operatorName });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "System logs wiped successfully",
+        description: `Successfully wiped ${data.wiped} system logs.`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/logs"] });
+      setShowWipeLogsDialog(false);
+      setIsWiping(false);
+      setSecurityPhrase("");
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to wipe system logs",
+        description: error.message,
+        variant: "destructive",
+      });
+      setIsWiping(false);
+      setSecurityPhrase("");
     },
   });
 
@@ -435,16 +498,39 @@ export function DatabaseTab({ operatorName }: DatabaseTabProps) {
                     <p className="text-neutral-600 text-sm mb-3">
                       Advanced database options. Please use with caution.
                     </p>
-                    <div className="flex space-x-2">
+                    <div className="flex flex-col space-y-2">
                       <Button 
                         variant="destructive" 
                         disabled={!students?.length}
                         onClick={() => {
+                          setWipeType("database");
                           setShowWipeDialog(true);
                         }}
                       >
                         <FontAwesomeIcon icon="trash-alt" className="mr-2" />
                         Wipe Database
+                      </Button>
+                      
+                      <Button 
+                        variant="destructive" 
+                        onClick={() => {
+                          setWipeType("checkers");
+                          setShowWipeDialog(true);
+                        }}
+                      >
+                        <FontAwesomeIcon icon="check-circle" className="mr-2" />
+                        Wipe Checkers
+                      </Button>
+                      
+                      <Button 
+                        variant="destructive"
+                        onClick={() => {
+                          setWipeType("logs");
+                          setShowWipeDialog(true);
+                        }}
+                      >
+                        <FontAwesomeIcon icon="history" className="mr-2" />
+                        Wipe System Logs
                       </Button>
                     </div>
                   </div>
@@ -455,24 +541,65 @@ export function DatabaseTab({ operatorName }: DatabaseTabProps) {
         </CardContent>
       </Card>
       
-      {/* Confirmation Dialog for Database Wipe */}
-      <Dialog open={showWipeDialog} onOpenChange={setShowWipeDialog}>
+      {/* Confirmation Dialog for Database Operations */}
+      <Dialog open={showWipeDialog} onOpenChange={(open) => {
+        setShowWipeDialog(open);
+        if (!open) {
+          setSecurityPhrase("");
+          setIsWiping(false);
+        }
+      }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Are you absolutely sure?</DialogTitle>
+            <DialogTitle>
+              {wipeType === "database" && "Wipe Entire Database?"}
+              {wipeType === "checkers" && "Reset Verified Distributions?"}
+              {wipeType === "logs" && "Clear System Logs?"}
+            </DialogTitle>
             <DialogDescription>
-              This action cannot be undone. This will permanently delete all student 
-              records from the database.
+              {wipeType === "database" && 
+                "This action cannot be undone. This will permanently delete all student records from the database."
+              }
+              {wipeType === "checkers" && 
+                "This action will reset all verified distributions to unverified status. This cannot be undone."
+              }
+              {wipeType === "logs" && 
+                "This action will permanently delete all system logs except administration logs. This cannot be undone."
+              }
               
               <div className="mt-2 bg-yellow-50 border border-yellow-200 p-3 rounded-md">
                 <p className="text-yellow-800 font-medium">Warning:</p>
                 <p className="text-yellow-700 text-sm">
-                  All student data, distributions, and payment records will be permanently 
-                  deleted. It is strongly recommended to export a backup first.
+                  {wipeType === "database" && 
+                    "All student data, distributions, and payment records will be permanently deleted. It is strongly recommended to export a backup first."
+                  }
+                  {wipeType === "checkers" && 
+                    "All verified distributions will be reset to unverified status. The system will no longer show these distributions as confirmed."
+                  }
+                  {wipeType === "logs" && 
+                    "All system logs except administration logs will be permanently deleted. This will affect the audit history of the system."
+                  }
                 </p>
               </div>
             </DialogDescription>
           </DialogHeader>
+          
+          <div className="py-4">
+            <label htmlFor="security-phrase" className="block text-sm font-medium mb-1">
+              Security Confirmation
+            </label>
+            <p className="text-sm text-neutral-600 mb-2">
+              To confirm this action, type <span className="font-bold">SuperSecure@1</span> in the field below:
+            </p>
+            <Input
+              id="security-phrase"
+              value={securityPhrase}
+              onChange={(e) => setSecurityPhrase(e.target.value)}
+              disabled={isWiping}
+              placeholder="Enter security phrase..."
+              className="mb-2"
+            />
+          </div>
           
           <DialogFooter>
             <Button variant="outline" disabled={isWiping} onClick={() => setShowWipeDialog(false)}>
@@ -480,21 +607,27 @@ export function DatabaseTab({ operatorName }: DatabaseTabProps) {
             </Button>
             <Button
               variant="destructive"
-              disabled={isWiping}
+              disabled={isWiping || securityPhrase !== "SuperSecure@1"}
               onClick={() => {
                 setIsWiping(true);
-                wipeDbMutation.mutate();
+                if (wipeType === "database") {
+                  wipeDbMutation.mutate();
+                } else if (wipeType === "checkers") {
+                  wipeCheckersMutation.mutate();
+                } else if (wipeType === "logs") {
+                  wipeLogsMutation.mutate();
+                }
               }}
             >
               {isWiping ? (
                 <>
                   <FontAwesomeIcon icon="spinner" spin className="mr-2" />
-                  Wiping...
+                  Processing...
                 </>
               ) : (
                 <>
-                  <FontAwesomeIcon icon="trash-alt" className="mr-2" />
-                  Wipe Database
+                  <FontAwesomeIcon icon="exclamation-triangle" className="mr-2" />
+                  Confirm Wipe
                 </>
               )}
             </Button>
