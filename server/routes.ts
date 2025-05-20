@@ -674,7 +674,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const verifiedDistributions = allDistributions.filter(dist => dist.verified);
       
       // We don't have a direct method to reset verified status, so we'll use a direct DB query
-      const { pool } = require("./db");
+      const { pool } = await import("./db");
       const result = await pool.query(
         "UPDATE distributions SET verified = false, verified_by = null, verified_at = null WHERE verified = true"
       );
@@ -716,7 +716,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allLogs = await storage.getLogs();
       
       // Use direct database query to delete logs except system logs
-      const { pool } = require("./db");
+      const { pool } = await import("./db");
       const result = await pool.query(
         "DELETE FROM action_logs WHERE student_id <> 'SYSTEM'"
       );
