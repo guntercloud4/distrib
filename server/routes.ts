@@ -476,42 +476,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Import students from CSV
   app.post("/api/students/import", async (req: Request, res: Response) => {
     try {
-      const students = req.body;
+      // Check if this is an array or an object with mappings & csvData
+      let studentsToImport = [];
+      let operatorName = "Ruby Station";
       
-      if (!Array.isArray(students)) {
-        return res.status(400).json({ 
-          error: "Expected array of students" 
-        });
+      if (Array.isArray(req.body)) {
+        // Direct array of student data
+        studentsToImport = req.body;
+      } else if (req.body && req.body.csvData && Array.isArray(req.body.csvData)) {
+        // Format with mappings and csvData
+        studentsToImport = req.body.csvData;
+        if (req.body.operatorName) {
+          operatorName = req.body.operatorName;
+        }
+      } else {
+        return res.status(400).json({ error: "Invalid import data format" });
+      }
+      
+      if (studentsToImport.length === 0) {
+        return res.status(400).json({ error: "No students to import" });
       }
 
-      // Import students directly
-      const importedStudents = await storage.importStudents(students);
+      // Import students
+      const importedStudents = await storage.importStudents(studentsToImport);
 
       // Log the action
-      const actionLog = await storage.createLog({
+      await storage.createLog({
         studentId: null,
         action: "IMPORT_STUDENTS",
-        details: { count: importedStudents.length },
+        details: { 
+          count: importedStudents.length,
+          total: studentsToImport.length 
+        },
         stationName: "Ruby Station",
-        operatorName,
+        operatorName: operatorName,
       });
 
-      // Broadcast log event
-      broadcastMessage({
-        type: "LOG_ACTION",
-        data: actionLog,
-      });
-
-      res.status(201).json({
-        imported: importedStudents.length,
-        students: importedStudents,
+      res.json({
+        success: importedStudents.length,
+        total: studentsToImport.length,
+        errors: studentsToImport.length - importedStudents.length,
       });
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res
-          .status(400)
-          .json({ error: "Invalid mapping data", details: error.errors });
-      }
+      console.error("Import error:", error);
       res.status(500).json({ error: "Failed to import students" });
     }
   });
