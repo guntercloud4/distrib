@@ -743,5 +743,136 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Operator routes
+  app.get("/api/operators", async (_req: Request, res: Response) => {
+    try {
+      const operatorList = await storage.getOperators();
+      res.json(operatorList);
+    } catch (error) {
+      console.error("Error fetching operators:", error);
+      res.status(500).json({ error: "Failed to fetch operators" });
+    }
+  });
+
+  app.get("/api/operators/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid operator ID" });
+      }
+
+      const operator = await storage.getOperatorById(id);
+      if (!operator) {
+        return res.status(404).json({ error: "Operator not found" });
+      }
+
+      res.json(operator);
+    } catch (error) {
+      console.error("Error fetching operator:", error);
+      res.status(500).json({ error: "Failed to fetch operator" });
+    }
+  });
+
+  app.post("/api/operators", async (req: Request, res: Response) => {
+    try {
+      const operatorData = insertOperatorSchema.parse(req.body);
+      
+      // Check if operator already exists
+      const existing = await storage.getOperatorByName(operatorData.name);
+      if (existing) {
+        return res.status(409).json({ error: "Operator already exists" });
+      }
+
+      const operator = await storage.createOperator(operatorData);
+      
+      // Log the action
+      await storage.createLog({
+        studentId: "SYSTEM",
+        action: "CREATE_OPERATOR",
+        details: { operator },
+        stationName: "Ruby Station",
+        operatorName: req.body.createdBy || "admin",
+      });
+      
+      res.status(201).json(operator);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid operator data", details: error.errors });
+      }
+      console.error("Error creating operator:", error);
+      res.status(500).json({ error: "Failed to create operator" });
+    }
+  });
+
+  app.put("/api/operators/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid operator ID" });
+      }
+
+      // Get existing operator
+      const existing = await storage.getOperatorById(id);
+      if (!existing) {
+        return res.status(404).json({ error: "Operator not found" });
+      }
+      
+      // Validate data
+      const operatorData = insertOperatorSchema.partial().parse(req.body);
+      
+      // Update operator
+      const operator = await storage.updateOperator(id, operatorData);
+      
+      // Log the action
+      await storage.createLog({
+        studentId: "SYSTEM",
+        action: "UPDATE_OPERATOR",
+        details: { operator, changes: operatorData },
+        stationName: "Ruby Station",
+        operatorName: req.body.updatedBy || "admin",
+      });
+      
+      res.json(operator);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid operator data", details: error.errors });
+      }
+      console.error("Error updating operator:", error);
+      res.status(500).json({ error: "Failed to update operator" });
+    }
+  });
+
+  app.delete("/api/operators/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid operator ID" });
+      }
+
+      // Get existing operator
+      const existing = await storage.getOperatorById(id);
+      if (!existing) {
+        return res.status(404).json({ error: "Operator not found" });
+      }
+      
+      // Delete operator
+      const success = await storage.deleteOperator(id);
+      
+      // Log the action
+      await storage.createLog({
+        studentId: "SYSTEM",
+        action: "DELETE_OPERATOR",
+        details: { operator: existing },
+        stationName: "Ruby Station",
+        operatorName: req.body.deletedBy || "admin",
+      });
+      
+      res.json({ success });
+    } catch (error) {
+      console.error("Error deleting operator:", error);
+      res.status(500).json({ error: "Failed to delete operator" });
+    }
+  });
+
   return httpServer;
 }
