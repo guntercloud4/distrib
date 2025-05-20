@@ -68,7 +68,7 @@ export const operators = pgTable("operators", {
   name: text("name").notNull().unique(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   active: boolean("active").notNull().default(true),
-  permissions: jsonb("permissions").notNull().default(defaultPermissions),
+  permissions: jsonb("permissions").$type<OperatorPermissions>().notNull().default(defaultPermissions),
 });
 
 // Insert schema types

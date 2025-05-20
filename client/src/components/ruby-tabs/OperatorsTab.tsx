@@ -47,7 +47,7 @@ export function OperatorsTab({ operatorName }: OperatorsTabProps) {
   const [newOperator, setNewOperator] = useState<InsertOperator>({
     name: "",
     active: true,
-    permissions: defaultPermissions
+    permissions: defaultPermissions as OperatorPermissions
   });
 
   const { toast } = useToast();
@@ -62,14 +62,21 @@ export function OperatorsTab({ operatorName }: OperatorsTabProps) {
     queryKey: ['/api/operators'],
     staleTime: 10000, // 10 seconds
     // Transform the data to ensure permissions object has correct structure
-    select: (data) => data.map(operator => ({
-      ...operator,
-      permissions: {
-        distribution: operator.permissions?.distribution || false,
-        checker: operator.permissions?.checker || false,
-        cash: operator.permissions?.cash || false
-      }
-    }))
+    select: (data) => data.map(operator => {
+      // Ensure permissions is properly structured
+      const permissions = operator.permissions || {};
+      return {
+        ...operator,
+        permissions: {
+          distribution: typeof permissions === 'object' && 'distribution' in permissions ? 
+            !!permissions.distribution : false,
+          checker: typeof permissions === 'object' && 'checker' in permissions ? 
+            !!permissions.checker : false,
+          cash: typeof permissions === 'object' && 'cash' in permissions ? 
+            !!permissions.cash : false
+        }
+      };
+    })
   });
 
   // Filter operators
@@ -166,7 +173,7 @@ export function OperatorsTab({ operatorName }: OperatorsTabProps) {
         distribution: false,
         checker: false,
         cash: false
-      }
+      } as OperatorPermissions
     });
   };
 
@@ -179,9 +186,18 @@ export function OperatorsTab({ operatorName }: OperatorsTabProps) {
   // Handle updating permissions
   const handlePermissionChange = (stationType: string, checked: boolean) => {
     if (selectedOperator) {
-      const updatedPermissions = {
-        ...selectedOperator.permissions,
-        [stationType]: checked
+      // Create a safe copy of current permissions
+      const currentPermissions = selectedOperator.permissions || {
+        distribution: false,
+        checker: false,
+        cash: false
+      };
+      
+      // Create updated permissions object with type safety
+      const updatedPermissions: OperatorPermissions = {
+        distribution: stationType === 'distribution' ? checked : !!currentPermissions.distribution,
+        checker: stationType === 'checker' ? checked : !!currentPermissions.checker,
+        cash: stationType === 'cash' ? checked : !!currentPermissions.cash
       };
       
       setSelectedOperator({
@@ -193,12 +209,23 @@ export function OperatorsTab({ operatorName }: OperatorsTabProps) {
 
   // Handle updating new operator permissions
   const handleNewPermissionChange = (stationType: string, checked: boolean) => {
+    // Create a safe copy of current permissions
+    const currentPermissions = newOperator.permissions || {
+      distribution: false,
+      checker: false,
+      cash: false
+    };
+    
+    // Create updated permissions object with type safety
+    const updatedPermissions: OperatorPermissions = {
+      distribution: stationType === 'distribution' ? checked : !!currentPermissions.distribution,
+      checker: stationType === 'checker' ? checked : !!currentPermissions.checker,
+      cash: stationType === 'cash' ? checked : !!currentPermissions.cash
+    };
+    
     setNewOperator({
       ...newOperator,
-      permissions: {
-        ...newOperator.permissions,
-        [stationType]: checked
-      }
+      permissions: updatedPermissions
     });
   };
 

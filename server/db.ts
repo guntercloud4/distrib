@@ -117,6 +117,14 @@ export async function initializeDatabase() {
               change_due NUMERIC NOT NULL,
               change_bills JSONB NOT NULL
             );
+            
+            CREATE TABLE IF NOT EXISTS operators (
+              id SERIAL PRIMARY KEY,
+              name TEXT NOT NULL UNIQUE,
+              created_at TIMESTAMP DEFAULT NOW(),
+              active BOOLEAN NOT NULL DEFAULT TRUE,
+              permissions JSONB NOT NULL DEFAULT '{"distribution": false, "checker": false, "cash": false}'
+            );
           `);
           
           // After creating tables, add a system log
