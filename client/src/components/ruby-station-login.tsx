@@ -11,15 +11,10 @@ interface RubyStationLoginProps {
 export function RubyStationLogin({ onLogin, onBack, showError }: RubyStationLoginProps) {
   const [name, setName] = useState("");
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Only allow the hardcoded admin to login
-    if (name === "ThisIsSuperSecure@1") {
-      onLogin(name);
-    } else {
-      // If not the hardcoded admin, trigger error display
-      onLogin("invalid");
-    }
+    // Send the name to the login handler to handle authentication
+    onLogin(name);
   };
 
   return (

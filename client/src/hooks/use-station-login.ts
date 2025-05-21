@@ -37,7 +37,7 @@ export function useStationLogin() {
   };
 
   // Function to handle login
-  const handleLogin = (name: string) => {
+  const handleLogin = async (name: string) => {
     if (!name.trim()) {
       toast({
         title: "Error",
@@ -47,9 +47,19 @@ export function useStationLogin() {
       return;
     }
 
-    if (selectedStation === "ruby" && !isAuthorizedRubyUser(name)) {
-      setRubyLoginError(true);
-      return;
+    // For Ruby station, check authorization asynchronously
+    if (selectedStation === "ruby") {
+      try {
+        const isAuthorized = await isAuthorizedRubyUser(name);
+        if (!isAuthorized) {
+          setRubyLoginError(true);
+          return;
+        }
+      } catch (error) {
+        console.error("Error checking Ruby authorization:", error);
+        setRubyLoginError(true);
+        return;
+      }
     }
 
     setOperatorName(name);

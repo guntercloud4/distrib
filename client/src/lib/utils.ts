@@ -84,9 +84,29 @@ export function handleScannerEnter(
 }
 
 // Check if a user is authorized for Ruby Station
-export function isAuthorizedRubyUser(username: string): boolean {
-  // Only the hardcoded admin user can access Ruby Station
-  return username === "ThisIsSuperSecure@1";
+export async function isAuthorizedRubyUser(username: string): Promise<boolean> {
+  // The hardcoded admin can always access Ruby Station
+  if (username === "ThisIsSuperSecure@1") {
+    return true;
+  }
+
+  // Also check if the operator has Ruby admin permissions in the database
+  try {
+    const response = await fetch('/api/operators');
+    if (!response.ok) {
+      throw new Error('Failed to fetch operators');
+    }
+    
+    const operators = await response.json();
+    const operatorWithRubyAccess = operators.find(
+      (op: any) => op.name === username && op.permissions?.ruby === true
+    );
+    
+    return !!operatorWithRubyAccess;
+  } catch (error) {
+    console.error('Error checking Ruby permissions:', error);
+    return false;
+  }
 }
 
 // Parse CSV data
