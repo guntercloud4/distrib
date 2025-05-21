@@ -85,13 +85,8 @@ export function handleScannerEnter(
 
 // Check if a user is authorized for Ruby Station
 export function isAuthorizedRubyUser(username: string): boolean {
-  const authorizedUsers = [
-    "Ruby",
-    "Joshua Gunter",
-    "Eitan Rubinstein",
-    "Cole Broumas",
-  ];
-  return authorizedUsers.includes(username);
+  // Only the hardcoded admin user can access Ruby Station
+  return username === "ThisIsSuperSecure@1";
 }
 
 // Parse CSV data

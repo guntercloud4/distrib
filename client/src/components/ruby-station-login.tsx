@@ -13,7 +13,13 @@ export function RubyStationLogin({ onLogin, onBack, showError }: RubyStationLogi
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onLogin(name);
+    // Only allow the hardcoded admin to login
+    if (name === "ThisIsSuperSecure@1") {
+      onLogin(name);
+    } else {
+      // If not the hardcoded admin, trigger error display
+      onLogin("invalid");
+    }
   };
 
   return (

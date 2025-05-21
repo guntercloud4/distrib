@@ -13,7 +13,7 @@ import { FreeBookTab } from "./ruby-tabs/FreeBookTab";
 import { LogsTab } from "./ruby-tabs/LogsTab";
 import { DataTab } from "./ruby-tabs/DataTab";
 import { OperatorsTab } from "./ruby-tabs/OperatorsTab";
-import { AdminsTab } from "./ruby-tabs/AdminsTab";
+
 
 interface RubyStationProps {
   operatorName: string;
