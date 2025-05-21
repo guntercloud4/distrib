@@ -31,18 +31,10 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold text-neutral-800">Ruby Station</h2>
               
-              <div className="flex items-center gap-4">
-                <div className="text-sm">
-                  <span className="text-neutral-500 mr-1">Operator:</span> 
-                  <span className="font-medium blur-sm hover:blur-none transition-all duration-300 cursor-default">
-                    {operatorName}
-                  </span>
-                </div>
-                <Button variant="outline" onClick={onLogout}>
-                  <FontAwesomeIcon icon="sign-out-alt" className="mr-2" />
-                  Logout
-                </Button>
-              </div>
+              <Button variant="outline" onClick={onLogout}>
+                <FontAwesomeIcon icon="sign-out-alt" className="mr-2" />
+                Logout
+              </Button>
             </div>
             
             <Tabs 
@@ -84,10 +76,7 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
                   <FontAwesomeIcon icon="history" className="mr-2" />
                   <span className="hidden md:inline">System Logs</span>
                 </TabsTrigger>
-                <TabsTrigger value="admins">
-                  <FontAwesomeIcon icon="hammer" className="mr-2" />
-                  <span className="hidden md:inline">Admins</span>
-                </TabsTrigger>
+
               </TabsList>
               
               <div className="mt-6">
@@ -124,9 +113,7 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
                   <LogsTab operatorName={operatorName} />
                 </TabsContent>
                 
-                <TabsContent value="admins">
-                  <AdminsTab operatorName={operatorName} />
-                </TabsContent>
+
               </div>
             </Tabs>
           </CardContent>

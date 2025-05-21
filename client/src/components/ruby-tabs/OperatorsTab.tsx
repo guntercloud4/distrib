@@ -36,6 +36,12 @@ export function OperatorsTab({ operatorName }: OperatorsTabProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [activeTab, setActiveTab] = useState<"operators" | "admin">("operators");
+  
+  // Admin authentication
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
+  const [secretPhrase, setSecretPhrase] = useState("");
+  const [showAuthError, setShowAuthError] = useState(false);
   // Initialize with type-safe permissions object
   const defaultPermissions: OperatorPermissions = {
     distribution: false,

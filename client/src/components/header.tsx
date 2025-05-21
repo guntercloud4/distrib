@@ -28,7 +28,7 @@ export function Header({ operatorName }: HeaderProps) {
         <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-4">
           <span className="text-sm text-neutral-600">{currentDateTime}</span>
           <div className="flex items-center space-x-2">
-            <span className="text-sm font-medium text-neutral-700">{operatorName || "Not logged in"}</span>
+            <span className="text-sm font-medium text-neutral-700 blur-sm hover:blur-none transition-all duration-300 cursor-default">{operatorName || "Not logged in"}</span>
             <span className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-white">
               <FontAwesomeIcon icon="user" />
             </span>
