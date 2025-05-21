@@ -21,7 +21,7 @@ interface RubyStationProps {
 }
 
 export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
-  const [activeTab, setActiveTab] = useState("database");
+  const [activeTab, setActiveTab] = useState("overview");
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -43,7 +43,11 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
               onValueChange={setActiveTab}
               className="w-full"
             >
-              <TabsList className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-2">
+              <TabsList className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-9 gap-2">
+                <TabsTrigger value="overview">
+                  <FontAwesomeIcon icon="info-circle" className="mr-2" />
+                  <span className="hidden md:inline">Overview</span>
+                </TabsTrigger>
                 <TabsTrigger value="database">
                   <FontAwesomeIcon icon="database" className="mr-2" />
                   <span className="hidden md:inline">Database</span>
@@ -79,6 +83,10 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
               </TabsList>
               
               <div className="mt-6">
+                <TabsContent value="overview">
+                  <OverviewTab operatorName={operatorName} />
+                </TabsContent>
+                
                 <TabsContent value="database">
                   <DatabaseTab operatorName={operatorName} />
                 </TabsContent>
