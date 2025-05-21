@@ -13,6 +13,7 @@ import { FreeBookTab } from "./ruby-tabs/FreeBookTab";
 import { LogsTab } from "./ruby-tabs/LogsTab";
 import { DataTab } from "./ruby-tabs/DataTab";
 import { OperatorsTab } from "./ruby-tabs/OperatorsTab";
+import { AdminsTab } from "./ruby-tabs/AdminsTab";
 
 interface RubyStationProps {
   operatorName: string;
@@ -75,6 +76,10 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
                   <FontAwesomeIcon icon="history" className="mr-2" />
                   <span className="hidden md:inline">System Logs</span>
                 </TabsTrigger>
+                <TabsTrigger value="admins">
+                  <FontAwesomeIcon icon="hammer" className="mr-2" />
+                  <span className="hidden md:inline">Admins</span>
+                </TabsTrigger>
               </TabsList>
               
               <div className="mt-6">
@@ -109,6 +114,10 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
                 
                 <TabsContent value="logs">
                   <LogsTab operatorName={operatorName} />
+                </TabsContent>
+                
+                <TabsContent value="admins">
+                  <AdminsTab operatorName={operatorName} />
                 </TabsContent>
               </div>
             </Tabs>

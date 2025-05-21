@@ -60,7 +60,8 @@ export const payments = pgTable("payments", {
 const defaultPermissions = {
   distribution: false,
   checker: false,
-  cash: false
+  cash: false,
+  ruby: false
 };
 
 export const operators = pgTable("operators", {
@@ -104,7 +105,8 @@ export const insertPaymentSchema = createInsertSchema(payments).omit({
 export const operatorPermissionsSchema = z.object({
   distribution: z.boolean().default(false),
   checker: z.boolean().default(false),
-  cash: z.boolean().default(false)
+  cash: z.boolean().default(false),
+  ruby: z.boolean().default(false)
 });
 
 export type OperatorPermissions = z.infer<typeof operatorPermissionsSchema>;
