@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { IconProp } from "@fortawesome/fontawesome-svg-core";
 import { socketProvider } from "@/lib/socket";
 import { useWsLogs } from "@/hooks/use-ws-logs";
 import { formatDistanceToNow } from "date-fns";
@@ -84,13 +85,13 @@ export function OverviewTab({ operatorName }: OverviewTabProps) {
   };
   
   // Get an icon for the station type
-  const getStationIcon = (type: string): string => {
+  const getStationIcon = (type: string): IconProp => {
     switch (type) {
-      case "cash": return "cash-register";
-      case "scanner": return "barcode";
-      case "checker": return "clipboard-check";
-      case "free-book": return "gift";
-      default: return "question-circle";
+      case "cash": return "cash-register" as IconProp;
+      case "scanner": return "barcode" as IconProp;
+      case "checker": return "clipboard-check" as IconProp;
+      case "free-book": return "gift" as IconProp;
+      default: return "question-circle" as IconProp;
     }
   };
   
@@ -138,7 +139,7 @@ export function OverviewTab({ operatorName }: OverviewTabProps) {
         <Card>
           <CardContent className="p-6">
             <h4 className="text-lg font-medium text-neutral-800 mb-4 flex items-center">
-              <FontAwesomeIcon icon="users" className="text-neutral-400 mr-2" />
+              <FontAwesomeIcon icon={"users" as IconProp} className="text-neutral-400 mr-2" />
               Active Sessions
             </h4>
             
@@ -152,7 +153,7 @@ export function OverviewTab({ operatorName }: OverviewTabProps) {
                     <div className="flex items-start justify-between">
                       <div className="flex items-center space-x-3">
                         <div className={`h-10 w-10 rounded-full flex items-center justify-center ${getStationColor(station.stationType).split(' ')[0]}`}>
-                          <FontAwesomeIcon icon={getStationIcon(station.stationType) as any} className={getStationColor(station.stationType).split(' ')[1]} />
+                          <FontAwesomeIcon icon={getStationIcon(station.stationType)} className={getStationColor(station.stationType).split(' ')[1]} />
                         </div>
                         <div>
                           <p className="font-medium text-neutral-800">{station.operatorName}</p>
@@ -172,7 +173,7 @@ export function OverviewTab({ operatorName }: OverviewTabProps) {
               </div>
             ) : (
               <div className="text-center py-10 text-neutral-500">
-                <FontAwesomeIcon icon="info-circle" className="text-neutral-300 text-4xl mb-3" />
+                <FontAwesomeIcon icon={"info-circle" as IconProp} className="text-neutral-300 text-4xl mb-3" />
                 <p>No active sessions detected</p>
                 <p className="text-sm text-neutral-400 mt-1">
                   Activity will appear here when operators use the system
@@ -186,7 +187,7 @@ export function OverviewTab({ operatorName }: OverviewTabProps) {
         <Card>
           <CardContent className="p-6">
             <h4 className="text-lg font-medium text-neutral-800 mb-4 flex items-center">
-              <FontAwesomeIcon icon="chart-bar" className="text-neutral-400 mr-2" />
+              <FontAwesomeIcon icon={"chart-bar" as IconProp} className="text-neutral-400 mr-2" />
               Station Statistics
             </h4>
             
@@ -195,7 +196,7 @@ export function OverviewTab({ operatorName }: OverviewTabProps) {
               <div className="bg-green-50 border border-green-100 rounded-lg p-4">
                 <div className="flex items-center justify-between mb-2">
                   <h5 className="text-sm font-medium text-green-800">Cash Stations</h5>
-                  <FontAwesomeIcon icon="cash-register" className="text-green-500" />
+                  <FontAwesomeIcon icon={"cash-register" as IconProp} className="text-green-500" />
                 </div>
                 <p className="text-2xl font-bold text-green-800">
                   {activeStations.filter(s => s.stationType === "cash").length}
@@ -207,7 +208,7 @@ export function OverviewTab({ operatorName }: OverviewTabProps) {
               <div className="bg-blue-50 border border-blue-100 rounded-lg p-4">
                 <div className="flex items-center justify-between mb-2">
                   <h5 className="text-sm font-medium text-blue-800">Distribution</h5>
-                  <FontAwesomeIcon icon="barcode" className="text-blue-500" />
+                  <FontAwesomeIcon icon={"barcode" as IconProp} className="text-blue-500" />
                 </div>
                 <p className="text-2xl font-bold text-blue-800">
                   {activeStations.filter(s => s.stationType === "scanner").length}
@@ -219,7 +220,7 @@ export function OverviewTab({ operatorName }: OverviewTabProps) {
               <div className="bg-purple-50 border border-purple-100 rounded-lg p-4">
                 <div className="flex items-center justify-between mb-2">
                   <h5 className="text-sm font-medium text-purple-800">Checkers</h5>
-                  <FontAwesomeIcon icon="clipboard-check" className="text-purple-500" />
+                  <FontAwesomeIcon icon={"clipboard-check" as IconProp} className="text-purple-500" />
                 </div>
                 <p className="text-2xl font-bold text-purple-800">
                   {activeStations.filter(s => s.stationType === "checker").length}
@@ -231,7 +232,7 @@ export function OverviewTab({ operatorName }: OverviewTabProps) {
               <div className="bg-amber-50 border border-amber-100 rounded-lg p-4">
                 <div className="flex items-center justify-between mb-2">
                   <h5 className="text-sm font-medium text-amber-800">Free Books</h5>
-                  <FontAwesomeIcon icon="gift" className="text-amber-500" />
+                  <FontAwesomeIcon icon={"gift" as IconProp} className="text-amber-500" />
                 </div>
                 <p className="text-2xl font-bold text-amber-800">
                   {activeStations.filter(s => s.stationType === "free-book").length}
