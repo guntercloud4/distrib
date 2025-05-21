@@ -713,13 +713,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get all logs count before deletion
       const allLogs = await storage.getLogs();
       
-      // Use direct database query to delete logs except system logs
+      // Use direct database query to delete ALL logs including system logs
       const { pool } = await import("./db");
       const result = await pool.query(
-        "DELETE FROM action_logs WHERE student_id <> 'SYSTEM'"
+        "DELETE FROM action_logs"
       );
       
-      // Log the action (this log will remain after wiping)
+      // Create a new log AFTER deletion to record who wiped the logs
       await storage.createLog({
         studentId: "SYSTEM",
         action: "WIPE_LOGS",
