@@ -31,10 +31,18 @@ export function RubyStation({ operatorName, onLogout }: RubyStationProps) {
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold text-neutral-800">Ruby Station</h2>
               
-              <Button variant="outline" onClick={onLogout}>
-                <FontAwesomeIcon icon="sign-out-alt" className="mr-2" />
-                Logout
-              </Button>
+              <div className="flex items-center gap-4">
+                <div className="text-sm">
+                  <span className="text-neutral-500 mr-1">Operator:</span> 
+                  <span className="font-medium blur-sm hover:blur-none transition-all duration-300 cursor-default">
+                    {operatorName}
+                  </span>
+                </div>
+                <Button variant="outline" onClick={onLogout}>
+                  <FontAwesomeIcon icon="sign-out-alt" className="mr-2" />
+                  Logout
+                </Button>
+              </div>
             </div>
             
             <Tabs 

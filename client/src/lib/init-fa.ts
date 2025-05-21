@@ -57,6 +57,9 @@ import {
   faCircleExclamation,
   faDatabase as faStorage,
   faSpinner as faLoading,
+  faHammer,
+  faUserSlash,
+  faCircleNotch,
   faClock
 } from '@fortawesome/free-solid-svg-icons';
 
@@ -119,5 +122,8 @@ library.add(
   faCircleExclamation,
   faStorage,
   faLoading,
+  faHammer,
+  faUserSlash,
+  faCircleNotch,
   faClock
 );
