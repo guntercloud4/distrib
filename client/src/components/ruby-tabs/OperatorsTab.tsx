@@ -42,18 +42,20 @@ export function OperatorsTab({ operatorName }: OperatorsTabProps) {
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
   const [secretPhrase, setSecretPhrase] = useState("");
   const [showAuthError, setShowAuthError] = useState(false);
+  
   // Initialize with type-safe permissions object
   const defaultPermissions: OperatorPermissions = {
     distribution: false,
     checker: false,
-    cash: false
+    cash: false,
+    ruby: false
   };
 
   const [selectedOperator, setSelectedOperator] = useState<Operator | null>(null);
   const [newOperator, setNewOperator] = useState<InsertOperator>({
     name: "",
     active: true,
-    permissions: defaultPermissions as OperatorPermissions
+    permissions: defaultPermissions
   });
 
   const { toast } = useToast();
@@ -79,7 +81,9 @@ export function OperatorsTab({ operatorName }: OperatorsTabProps) {
           checker: typeof permissions === 'object' && 'checker' in permissions ? 
             !!permissions.checker : false,
           cash: typeof permissions === 'object' && 'cash' in permissions ? 
-            !!permissions.cash : false
+            !!permissions.cash : false,
+          ruby: typeof permissions === 'object' && 'ruby' in permissions ? 
+            !!permissions.ruby : false
         }
       };
     })
@@ -178,8 +182,9 @@ export function OperatorsTab({ operatorName }: OperatorsTabProps) {
       permissions: {
         distribution: false,
         checker: false,
-        cash: false
-      } as OperatorPermissions
+        cash: false,
+        ruby: false
+      }
     });
   };
 
@@ -196,14 +201,16 @@ export function OperatorsTab({ operatorName }: OperatorsTabProps) {
       const currentPermissions = selectedOperator.permissions || {
         distribution: false,
         checker: false,
-        cash: false
+        cash: false,
+        ruby: false
       };
       
       // Create updated permissions object with type safety
       const updatedPermissions: OperatorPermissions = {
         distribution: stationType === 'distribution' ? checked : !!currentPermissions.distribution,
         checker: stationType === 'checker' ? checked : !!currentPermissions.checker,
-        cash: stationType === 'cash' ? checked : !!currentPermissions.cash
+        cash: stationType === 'cash' ? checked : !!currentPermissions.cash,
+        ruby: stationType === 'ruby' ? checked : !!currentPermissions.ruby
       };
       
       setSelectedOperator({
@@ -219,14 +226,16 @@ export function OperatorsTab({ operatorName }: OperatorsTabProps) {
     const currentPermissions = newOperator.permissions || {
       distribution: false,
       checker: false,
-      cash: false
+      cash: false,
+      ruby: false
     };
     
     // Create updated permissions object with type safety
     const updatedPermissions: OperatorPermissions = {
       distribution: stationType === 'distribution' ? checked : !!currentPermissions.distribution,
       checker: stationType === 'checker' ? checked : !!currentPermissions.checker,
-      cash: stationType === 'cash' ? checked : !!currentPermissions.cash
+      cash: stationType === 'cash' ? checked : !!currentPermissions.cash,
+      ruby: stationType === 'ruby' ? checked : !!currentPermissions.ruby
     };
     
     setNewOperator({
@@ -235,144 +244,265 @@ export function OperatorsTab({ operatorName }: OperatorsTabProps) {
     });
   };
 
+  // Handle admin authentication
+  const handleAdminAuthenticate = () => {
+    if (secretPhrase === "ThisIsSuperSecure@1") {
+      setIsAdminAuthenticated(true);
+      setShowAuthError(false);
+      toast({
+        title: "Ruby Admin Access Granted",
+        description: "You now have Ruby administrator privileges.",
+      });
+    } else {
+      setShowAuthError(true);
+      toast({
+        title: "Authentication Failed",
+        description: "The secret phrase is incorrect.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <Card>
-        <CardContent className="p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-medium text-neutral-800">Operators Management</h3>
-            <Button onClick={() => setShowAddDialog(true)}>
-              <FontAwesomeIcon icon="plus" className="mr-2" />
-              Add Operator
-            </Button>
-          </div>
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-lg font-medium text-neutral-800">Management Console</h3>
+        <div className="flex space-x-2">
+          <Button 
+            variant={activeTab === "operators" ? "default" : "outline"}
+            onClick={() => setActiveTab("operators")}
+          >
+            <FontAwesomeIcon icon="users" className="mr-2" />
+            Operators
+          </Button>
+          <Button 
+            variant={activeTab === "admin" ? "default" : "outline"}
+            onClick={() => setActiveTab("admin")}
+          >
+            <FontAwesomeIcon icon="hammer" className="mr-2" />
+            Ruby Admin
+          </Button>
+        </div>
+      </div>
 
-          <div className="mb-4">
-            <div className="relative">
-              <Input
-                placeholder="Search operators..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-              <FontAwesomeIcon
-                icon="search"
-                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400"
-              />
-              {searchTerm && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0"
-                  onClick={() => setSearchTerm("")}
-                >
-                  <FontAwesomeIcon icon="times" />
-                </Button>
+      {activeTab === "operators" ? (
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium text-neutral-800">Operators Management</h3>
+              <Button onClick={() => setShowAddDialog(true)}>
+                <FontAwesomeIcon icon="plus" className="mr-2" />
+                Add Operator
+              </Button>
+            </div>
+
+            <div className="mb-4">
+              <div className="relative">
+                <Input
+                  placeholder="Search operators..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+                <FontAwesomeIcon
+                  icon="search"
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400"
+                />
+                {searchTerm && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0"
+                    onClick={() => setSearchTerm("")}
+                  >
+                    <FontAwesomeIcon icon="times" />
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {operatorsLoading ? (
+              <div className="flex justify-center items-center py-12">
+                <FontAwesomeIcon icon="spinner" className="animate-spin text-2xl text-neutral-400" />
+              </div>
+            ) : operatorsError ? (
+              <div className="flex flex-col items-center justify-center py-12 text-neutral-500">
+                <FontAwesomeIcon icon="exclamation-circle" className="text-3xl mb-4 text-red-500" />
+                <p>Failed to load operators</p>
+              </div>
+            ) : filteredOperators.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-neutral-500">
+                <FontAwesomeIcon icon="user-slash" className="text-3xl mb-4 text-neutral-300" />
+                <p>No operators found</p>
+                {searchTerm && <p className="text-sm mt-2">Try a different search term</p>}
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Permissions</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredOperators.map((operator) => (
+                      <TableRow key={operator.id}>
+                        <TableCell className="font-medium">{operator.name}</TableCell>
+                        <TableCell>
+                          {operator.active ? (
+                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                              Active
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="bg-neutral-50 text-neutral-700 border-neutral-200">
+                              Inactive
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-2 flex-wrap">
+                            {operator.permissions?.distribution && (
+                              <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-200">
+                                Distribution
+                              </Badge>
+                            )}
+                            {operator.permissions?.checker && (
+                              <Badge variant="secondary" className="bg-purple-50 text-purple-700 border-purple-200">
+                                Checker
+                              </Badge>
+                            )}
+                            {operator.permissions?.cash && (
+                              <Badge variant="secondary" className="bg-amber-50 text-amber-700 border-amber-200">
+                                Cash
+                              </Badge>
+                            )}
+                            {operator.permissions?.ruby && (
+                              <Badge variant="secondary" className="bg-red-50 text-red-700 border-red-200">
+                                Ruby Admin
+                              </Badge>
+                            )}
+                            {!operator.permissions?.distribution && 
+                             !operator.permissions?.checker && 
+                             !operator.permissions?.cash &&
+                             !operator.permissions?.ruby && (
+                              <span className="text-neutral-400 text-sm">
+                                None
+                              </span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex space-x-2">
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              onClick={() => handleEditOperator(operator)}
+                            >
+                              <FontAwesomeIcon icon="edit" className="mr-2" />
+                              Edit
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-red-600 hover:text-red-700"
+                              onClick={() => {
+                                setSelectedOperator(operator);
+                                if (confirm(`Are you sure you want to delete operator "${operator.name}"?`)) {
+                                  deleteOperatorMutation.mutate(operator.id);
+                                }
+                              }}
+                            >
+                              <FontAwesomeIcon icon="trash-alt" className="mr-2" />
+                              Delete
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      ) : (
+        <Card>
+          <CardContent className="p-6">
+            <div className="mb-8">
+              <h3 className="text-lg font-medium text-neutral-800 mb-4">Ruby Administration</h3>
+              
+              {!isAdminAuthenticated ? (
+                <div className="max-w-md mx-auto">
+                  <div className="bg-neutral-50 p-6 rounded-lg border border-neutral-200">
+                    <h4 className="text-md font-medium mb-4">Authentication Required</h4>
+                    <p className="text-neutral-600 mb-4">
+                      Enter the admin secret phrase to manage Ruby administration settings:
+                    </p>
+                    
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="secretPhrase">Secret Phrase</Label>
+                        <Input
+                          id="secretPhrase"
+                          type="password"
+                          value={secretPhrase}
+                          onChange={(e) => {
+                            setSecretPhrase(e.target.value);
+                            setShowAuthError(false);
+                          }}
+                          className={showAuthError ? "border-red-500" : ""}
+                        />
+                        {showAuthError && (
+                          <p className="text-red-500 text-sm mt-1">
+                            Incorrect secret phrase. Please try again.
+                          </p>
+                        )}
+                      </div>
+                      
+                      <Button onClick={handleAdminAuthenticate}>
+                        <FontAwesomeIcon icon="key" className="mr-2" />
+                        Authenticate
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <div className="bg-green-50 p-4 rounded-lg border border-green-200 mb-6">
+                    <div className="flex items-center">
+                      <FontAwesomeIcon icon="check-circle" className="text-green-500 mr-3 text-xl" />
+                      <div>
+                        <h4 className="font-medium text-green-800">Authenticated as Admin</h4>
+                        <p className="text-green-700 text-sm">
+                          You have full access to Ruby administration settings
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-6">
+                    <div className="bg-white border rounded-lg p-4">
+                      <h4 className="font-medium mb-3">Secret Access Management</h4>
+                      <p className="text-neutral-600 text-sm mb-4">
+                        The system is currently using the hardcoded operator "ThisIsSuperSecure@1" for Ruby access.
+                      </p>
+                      <div className="flex items-center">
+                        <Badge className="bg-amber-100 text-amber-800 border-amber-200">
+                          <FontAwesomeIcon icon="lock" className="mr-1" />
+                          Hardcoded Authentication
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               )}
             </div>
-          </div>
-
-          {operatorsLoading ? (
-            <div className="flex justify-center items-center py-12">
-              <FontAwesomeIcon icon="spinner" className="animate-spin text-2xl text-neutral-400" />
-            </div>
-          ) : operatorsError ? (
-            <div className="flex flex-col items-center justify-center py-12 text-neutral-500">
-              <FontAwesomeIcon icon="exclamation-circle" className="text-3xl mb-4 text-red-500" />
-              <p>Failed to load operators</p>
-            </div>
-          ) : filteredOperators.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-neutral-500">
-              <FontAwesomeIcon icon="user-slash" className="text-3xl mb-4 text-neutral-300" />
-              <p>No operators found</p>
-              {searchTerm && <p className="text-sm mt-2">Try a different search term</p>}
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Permissions</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredOperators.map((operator) => (
-                    <TableRow key={operator.id}>
-                      <TableCell className="font-medium">{operator.name}</TableCell>
-                      <TableCell>
-                        {operator.active ? (
-                          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                            Active
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="bg-neutral-50 text-neutral-700 border-neutral-200">
-                            Inactive
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2 flex-wrap">
-                          {operator.permissions?.distribution && (
-                            <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-200">
-                              Distribution
-                            </Badge>
-                          )}
-                          {operator.permissions?.checker && (
-                            <Badge variant="secondary" className="bg-purple-50 text-purple-700 border-purple-200">
-                              Checker
-                            </Badge>
-                          )}
-                          {operator.permissions?.cash && (
-                            <Badge variant="secondary" className="bg-amber-50 text-amber-700 border-amber-200">
-                              Cash
-                            </Badge>
-                          )}
-                          {!operator.permissions?.distribution && 
-                           !operator.permissions?.checker && 
-                           !operator.permissions?.cash && (
-                            <span className="text-neutral-400 text-sm">
-                              None
-                            </span>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex space-x-2">
-                          <Button 
-                            size="sm" 
-                            variant="outline" 
-                            onClick={() => handleEditOperator(operator)}
-                          >
-                            <FontAwesomeIcon icon="edit" className="mr-2" />
-                            Edit
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            variant="outline" 
-                            className="text-red-600 hover:text-red-700"
-                            onClick={() => {
-                              setSelectedOperator(operator);
-                              if (confirm(`Are you sure you want to delete operator "${operator.name}"?`)) {
-                                deleteOperatorMutation.mutate(operator.id);
-                              }
-                            }}
-                          >
-                            <FontAwesomeIcon icon="trash-alt" className="mr-2" />
-                            Delete
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Add Operator Dialog */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
@@ -450,31 +580,48 @@ export function OperatorsTab({ operatorName }: OperatorsTabProps) {
                     Cash Station
                   </Label>
                 </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="ruby"
+                    checked={newOperator.permissions?.ruby}
+                    onCheckedChange={(checked) => 
+                      handleNewPermissionChange("ruby", checked as boolean)
+                    }
+                  />
+                  <Label htmlFor="ruby" className="cursor-pointer">
+                    Ruby Administration
+                  </Label>
+                </div>
               </div>
             </div>
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => {
-              setShowAddDialog(false);
-              resetNewOperator();
-            }}>
+            <Button variant="outline" onClick={() => setShowAddDialog(false)}>
               Cancel
             </Button>
             <Button
-              onClick={() => createOperatorMutation.mutate(newOperator as InsertOperator)}
-              disabled={!newOperator.name || createOperatorMutation.isPending}
+              onClick={() => {
+                if (!newOperator.name) {
+                  toast({
+                    title: "Name required",
+                    description: "Please enter a name for the operator.",
+                    variant: "destructive"
+                  });
+                  return;
+                }
+                createOperatorMutation.mutate(newOperator);
+              }}
+              disabled={createOperatorMutation.isPending}
             >
               {createOperatorMutation.isPending ? (
                 <>
                   <FontAwesomeIcon icon="spinner" className="animate-spin mr-2" />
-                  Creating...
+                  Saving...
                 </>
               ) : (
-                <>
-                  <FontAwesomeIcon icon="plus" className="mr-2" />
-                  Add Operator
-                </>
+                "Save"
               )}
             </Button>
           </DialogFooter>
@@ -487,19 +634,18 @@ export function OperatorsTab({ operatorName }: OperatorsTabProps) {
           <DialogHeader>
             <DialogTitle>Edit Operator</DialogTitle>
             <DialogDescription>
-              Update operator details and permissions.
+              Modify operator details and permissions.
             </DialogDescription>
           </DialogHeader>
 
           {selectedOperator && (
             <div className="py-4 space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="edit-name">Operator Name</Label>
+                <Label htmlFor="edit-name">Name</Label>
                 <Input
                   id="edit-name"
                   value={selectedOperator.name}
                   onChange={(e) => setSelectedOperator({ ...selectedOperator, name: e.target.value })}
-                  placeholder="Enter name"
                 />
               </div>
 
@@ -509,7 +655,9 @@ export function OperatorsTab({ operatorName }: OperatorsTabProps) {
                   <Switch
                     id="edit-status"
                     checked={selectedOperator.active}
-                    onCheckedChange={(checked) => setSelectedOperator({ ...selectedOperator, active: checked })}
+                    onCheckedChange={(checked) => 
+                      setSelectedOperator({ ...selectedOperator, active: checked })
+                    }
                   />
                   <Label htmlFor="edit-status" className="cursor-pointer">
                     {selectedOperator.active ? "Active" : "Inactive"}
@@ -558,44 +706,60 @@ export function OperatorsTab({ operatorName }: OperatorsTabProps) {
                       Cash Station
                     </Label>
                   </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="edit-ruby"
+                      checked={selectedOperator.permissions?.ruby}
+                      onCheckedChange={(checked) => 
+                        handlePermissionChange("ruby", checked as boolean)
+                      }
+                    />
+                    <Label htmlFor="edit-ruby" className="cursor-pointer">
+                      Ruby Administration
+                    </Label>
+                  </div>
                 </div>
               </div>
             </div>
           )}
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => {
-              setShowEditDialog(false);
-              setSelectedOperator(null);
-            }}>
+            <Button variant="outline" onClick={() => setShowEditDialog(false)}>
               Cancel
             </Button>
-            {selectedOperator && (
-              <Button
-                onClick={() => {
-                  if (selectedOperator) {
-                    const { id, name, active, permissions } = selectedOperator;
-                    updateOperatorMutation.mutate({
-                      id,
-                      data: { name, active, permissions }
+            <Button
+              onClick={() => {
+                if (selectedOperator) {
+                  if (!selectedOperator.name) {
+                    toast({
+                      title: "Name required",
+                      description: "Please enter a name for the operator.",
+                      variant: "destructive"
                     });
+                    return;
                   }
-                }}
-                disabled={!selectedOperator.name || updateOperatorMutation.isPending}
-              >
-                {updateOperatorMutation.isPending ? (
-                  <>
-                    <FontAwesomeIcon icon="spinner" className="animate-spin mr-2" />
-                    Updating...
-                  </>
-                ) : (
-                  <>
-                    <FontAwesomeIcon icon="save" className="mr-2" />
-                    Save Changes
-                  </>
-                )}
-              </Button>
-            )}
+                  updateOperatorMutation.mutate({
+                    id: selectedOperator.id,
+                    data: {
+                      name: selectedOperator.name,
+                      active: selectedOperator.active,
+                      permissions: selectedOperator.permissions
+                    }
+                  });
+                }
+              }}
+              disabled={updateOperatorMutation.isPending}
+            >
+              {updateOperatorMutation.isPending ? (
+                <>
+                  <FontAwesomeIcon icon="spinner" className="animate-spin mr-2" />
+                  Updating...
+                </>
+              ) : (
+                "Update"
+              )}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
