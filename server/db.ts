@@ -1,28 +1,17 @@
-import { Pool, neonConfig } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-serverless';
-import { migrate } from 'drizzle-orm/neon-serverless/migrator';
-import ws from "ws";
+import { Pool } from 'pg';
+import { drizzle } from 'drizzle-orm/node-postgres';
 import * as schema from "@shared/schema";
 import { log } from "./vite";
 import { eq } from 'drizzle-orm';
 import { actionLogs } from '@shared/schema';
 
-neonConfig.webSocketConstructor = ws;
-
 if (!process.env.DATABASE_URL) {
-  throw new Error(
-    "DATABASE_URL must be set. Did you forget to provision a database?",
-  );
+  throw new Error("DATABASE_URL must be set");
 }
 
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: true,
-  max: 10,
-  connectionTimeoutMillis: 0, // Disable connection timeout
-  idleTimeoutMillis: 0, // Disable idle timeout
-  allowExitOnIdle: false,
-  keepAlive: true
+  max: 10
 });
 
 pool.on('error', (err) => {
@@ -46,7 +35,7 @@ export async function initializeDatabase() {
       const testResult = await pool.query('SELECT NOW()');
       if (testResult.rows.length > 0) {
         log('Database connection successful', 'database');
-        
+
         // Test student table
         const studentTest = await pool.query('SELECT COUNT(*) FROM students');
         log(`Found ${studentTest.rows[0].count} students in database`, 'database');
@@ -61,13 +50,13 @@ export async function initializeDatabase() {
             AND table_name = 'students'
           );
         `);
-        
+
         const tablesExist = tableCheckResult.rows[0]?.exists || false;
-        
+
         // If tables don't exist yet, create them
         if (!tablesExist) {
           log('Creating database tables using SQL...', 'database');
-          
+
           await pool.query(`
             CREATE TABLE IF NOT EXISTS students (
               id SERIAL PRIMARY KEY,
@@ -86,7 +75,7 @@ export async function initializeDatabase() {
               photo_pockets BOOLEAN NOT NULL DEFAULT FALSE,
               photo_url TEXT
             );
-            
+
             CREATE TABLE IF NOT EXISTS action_logs (
               id SERIAL PRIMARY KEY,
               timestamp TIMESTAMP DEFAULT NOW(),
@@ -96,7 +85,7 @@ export async function initializeDatabase() {
               station_name TEXT NOT NULL,
               operator_name TEXT NOT NULL
             );
-            
+
             CREATE TABLE IF NOT EXISTS distributions (
               id SERIAL PRIMARY KEY,
               timestamp TIMESTAMP DEFAULT NOW(),
@@ -106,7 +95,7 @@ export async function initializeDatabase() {
               verified_by TEXT,
               verified_at TIMESTAMP
             );
-            
+
             CREATE TABLE IF NOT EXISTS payments (
               id SERIAL PRIMARY KEY,
               timestamp TIMESTAMP DEFAULT NOW(),
@@ -117,7 +106,7 @@ export async function initializeDatabase() {
               change_due NUMERIC NOT NULL,
               change_bills JSONB NOT NULL
             );
-            
+
             CREATE TABLE IF NOT EXISTS operators (
               id SERIAL PRIMARY KEY,
               name TEXT NOT NULL UNIQUE,
@@ -126,10 +115,10 @@ export async function initializeDatabase() {
               permissions JSONB NOT NULL DEFAULT '{"distribution": false, "checker": false, "cash": false}'
             );
           `);
-          
+
           // After creating tables, add a system log
           log('Database initialized successfully', 'database');
-          
+
           try {
             await pool.query(`
               INSERT INTO action_logs (action, station_name, operator_name, details) 
@@ -143,13 +132,13 @@ export async function initializeDatabase() {
         } else {
           log('Database tables already exist', 'database');
         }
-        
+
         return true;  // Database is initialized and ready
       } catch (schemaError) {
         log(`Schema check error: ${schemaError}`, 'database');
         // Continue anyway - tables may exist already
       }
-      
+
       // Default return if we get this far
       return true;
     } catch (error) {
