@@ -42,20 +42,25 @@ export function StudentInfo({
     <Card className="overflow-hidden mb-6">
       <CardContent className="p-6 grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="md:col-span-1">
-          {/* Student photo or placeholder */}
+          {/* Student photo - always use hardcoded URL format */}
           <div className="bg-neutral-100 rounded-lg overflow-hidden h-48 flex items-center justify-center">
-            {student.photoUrl ? (
-              <img 
-                src={student.photoUrl} 
-                alt={`${student.firstName} ${student.lastName}`}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="flex flex-col items-center justify-center text-neutral-500">
-                <FontAwesomeIcon icon="user-circle" className="text-5xl mb-2" />
-                <span className="text-sm">No photo available</span>
-              </div>
-            )}
+            <img 
+              src={`https://cdn.gunter.cloud/faces/${student.lastName}_${student.firstName}.jpg`}
+              alt={`${student.firstName} ${student.lastName}`}
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                e.currentTarget.onerror = null; 
+                e.currentTarget.src = ""; 
+                e.currentTarget.parentElement!.innerHTML = `
+                  <div class="flex flex-col items-center justify-center text-neutral-500 h-full w-full">
+                    <svg class="h-12 w-12 mb-2" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                      <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path>
+                    </svg>
+                    <span class="text-sm">No photo available</span>
+                  </div>
+                `;
+              }}
+            />
           </div>
         </div>
         
@@ -81,25 +86,60 @@ export function StudentInfo({
             <div className="border-t border-neutral-200 pt-4">
               <h4 className="text-sm font-medium text-neutral-700 mb-2">Order Details</h4>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-                <div className="bg-neutral-50 p-3 rounded-md">
+                <div className={`p-3 rounded-md ${student.yearbook ? 'bg-green-50' : 'bg-neutral-50'}`}>
                   <p className="text-xs text-neutral-500">Yearbook</p>
-                  <p className="font-medium text-neutral-800">{student.yearbook ? "Yes" : "No"}</p>
+                  <p className="font-medium text-neutral-800">
+                    {student.yearbook ? (
+                      <span className="flex items-center text-green-600">
+                        <FontAwesomeIcon icon="check" className="mr-1" />
+                        Yes
+                      </span>
+                    ) : "No"}
+                  </p>
                 </div>
-                <div className="bg-neutral-50 p-3 rounded-md">
+                <div className={`p-3 rounded-md ${student.personalization ? 'bg-green-50' : 'bg-neutral-50'}`}>
                   <p className="text-xs text-neutral-500">Personalization</p>
-                  <p className="font-medium text-neutral-800">{student.personalization ? "Yes" : "No"}</p>
+                  <p className="font-medium text-neutral-800">
+                    {student.personalization ? (
+                      <span className="flex items-center text-green-600">
+                        <FontAwesomeIcon icon="check" className="mr-1" />
+                        Yes
+                      </span>
+                    ) : "No"}
+                  </p>
                 </div>
-                <div className="bg-neutral-50 p-3 rounded-md">
+                <div className={`p-3 rounded-md ${student.signaturePackage ? 'bg-green-50' : 'bg-neutral-50'}`}>
                   <p className="text-xs text-neutral-500">Signature Pkg</p>
-                  <p className="font-medium text-neutral-800">{student.signaturePackage ? "Yes" : "No"}</p>
+                  <p className="font-medium text-neutral-800">
+                    {student.signaturePackage ? (
+                      <span className="flex items-center text-green-600">
+                        <FontAwesomeIcon icon="check" className="mr-1" />
+                        Yes
+                      </span>
+                    ) : "No"}
+                  </p>
                 </div>
-                <div className="bg-neutral-50 p-3 rounded-md">
+                <div className={`p-3 rounded-md ${student.clearCover ? 'bg-green-50' : 'bg-neutral-50'}`}>
                   <p className="text-xs text-neutral-500">Clear Cover</p>
-                  <p className="font-medium text-neutral-800">{student.clearCover ? "Yes" : "No"}</p>
+                  <p className="font-medium text-neutral-800">
+                    {student.clearCover ? (
+                      <span className="flex items-center text-green-600">
+                        <FontAwesomeIcon icon="check" className="mr-1" />
+                        Yes
+                      </span>
+                    ) : "No"}
+                  </p>
                 </div>
-                <div className="bg-neutral-50 p-3 rounded-md">
+                <div className={`p-3 rounded-md ${student.photoPockets ? 'bg-green-50' : 'bg-neutral-50'}`}>
                   <p className="text-xs text-neutral-500">Photo Pockets</p>
-                  <p className="font-medium text-neutral-800">{student.photoPockets ? "Yes" : "No"}</p>
+                  <p className="font-medium text-neutral-800">
+                    {student.photoPockets ? (
+                      <span className="flex items-center text-green-600">
+                        <FontAwesomeIcon icon="check" className="mr-1" />
+                        Yes
+                      </span>
+                    ) : "No"}
+                  </p>
                 </div>
               </div>
             </div>
