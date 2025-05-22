@@ -90,18 +90,18 @@ export function StudentInfo({
                   <p className="text-xs text-neutral-500">Yearbook</p>
                   <p className="font-medium text-neutral-800">
                     {student.yearbook ? (
-                      <span className="flex items-center text-green-600">
+                      <span className="flex items-center justify-center text-green-600">
                         <FontAwesomeIcon icon="check" className="mr-1" />
                         Yes
                       </span>
                     ) : "No"}
                   </p>
                 </div>
-                <div className={`p-3 rounded-md ${student.personalization ? 'bg-green-50' : 'bg-neutral-50'}`}>
-                  <p className="text-xs text-neutral-500">Personalization</p>
+                <div className={`p-3 rounded-md ${student.personalization ? 'bg-yellow-100 border border-yellow-300' : 'bg-neutral-50'}`}>
+                  <p className="text-xs text-neutral-500 font-medium">Personalization</p>
                   <p className="font-medium text-neutral-800">
                     {student.personalization ? (
-                      <span className="flex items-center text-green-600">
+                      <span className="flex items-center justify-center text-yellow-700 font-bold">
                         <FontAwesomeIcon icon="check" className="mr-1" />
                         Yes
                       </span>
@@ -112,7 +112,7 @@ export function StudentInfo({
                   <p className="text-xs text-neutral-500">Signature Pkg</p>
                   <p className="font-medium text-neutral-800">
                     {student.signaturePackage ? (
-                      <span className="flex items-center text-green-600">
+                      <span className="flex items-center justify-center text-green-600">
                         <FontAwesomeIcon icon="check" className="mr-1" />
                         Yes
                       </span>
@@ -123,7 +123,7 @@ export function StudentInfo({
                   <p className="text-xs text-neutral-500">Clear Cover</p>
                   <p className="font-medium text-neutral-800">
                     {student.clearCover ? (
-                      <span className="flex items-center text-green-600">
+                      <span className="flex items-center justify-center text-green-600">
                         <FontAwesomeIcon icon="check" className="mr-1" />
                         Yes
                       </span>
@@ -134,7 +134,7 @@ export function StudentInfo({
                   <p className="text-xs text-neutral-500">Photo Pockets</p>
                   <p className="font-medium text-neutral-800">
                     {student.photoPockets ? (
-                      <span className="flex items-center text-green-600">
+                      <span className="flex items-center justify-center text-green-600">
                         <FontAwesomeIcon icon="check" className="mr-1" />
                         Yes
                       </span>
